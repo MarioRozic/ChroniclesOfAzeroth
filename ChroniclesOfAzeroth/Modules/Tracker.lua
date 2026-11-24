@@ -33,6 +33,8 @@ function Tracker:OnEnable()
     CoA:RegisterEvent("QUEST_COMPLETE", self, "OnQuestComplete")
     CoA:RegisterEvent("QUEST_TURNED_IN", self, "OnQuestTurnedIn")
     CoA:RegisterEvent("PLAYER_DEAD", self, "OnPlayerDead")
+    -- Phase 2: fires when a new area of the world map is revealed.
+    CoA:RegisterEvent("MAP_EXPLORATION_UPDATED", self, "OnMapExplored")
 end
 
 function Tracker:OnEnterWorld(isFirstOfSession, isInitialLogin)
@@ -53,6 +55,40 @@ end
 function Tracker:OnSubZoneChanged()
     local loc = CoA.char.location
     loc.subzone = Compat.GetSubZone() or ""
+    self:RecordSubZone()
+end
+
+-- Remembers each named sub-zone (village, cave, camp) visited per zone.
+function Tracker:RecordSubZone()
+    local char = CoA.char
+    local loc = char.location
+    local rec = loc.zone ~= "" and char.exploration.zones[loc.zone]
+    if not rec or rec.isInstance then return end
+    local sub = loc.subzone
+    if sub == "" or sub == loc.zone then return end
+    rec.subzones = rec.subzones or {}
+    if not rec.subzones[sub] then
+        rec.subzones[sub] = time()
+        char.stats.subzonesDiscovered = char.stats.subzonesDiscovered + 1
+        CoA:Fire("STATS_CHANGED", "subzone")
+    end
+end
+
+-- A new part of the world map was revealed by walking there.
+function Tracker:OnMapExplored()
+    local char = CoA.char
+    local loc = char.location
+    local area = Compat.GetSubZone() or (loc.zone ~= "" and loc.zone) or nil
+    local entry = CoA.Feed:Add("area_discovered", { area = area, zone = loc.zone ~= "" and loc.zone or nil },
+        { dedupe = "area" .. tostring(area), window = 30 })
+    if not entry then return end
+    char.stats.areasDiscovered = char.stats.areasDiscovered + 1
+    local rec = loc.zone ~= "" and char.exploration.zones[loc.zone]
+    if rec then
+        rec.areasDiscovered = (rec.areasDiscovered or 0) + 1
+        rec.revealed = Compat.GetRevealedAreaCount(rec.mapID) or rec.revealed
+    end
+    CoA:Fire("STATS_CHANGED", "area")
 end
 
 local function GetZoneRecord(name, mapID, isInstance)
@@ -64,7 +100,13 @@ local function GetZoneRecord(name, mapID, isInstance)
         zones[name] = rec
         isNew = true
     end
-    if mapID then rec.mapID = mapID end
+    if mapID then
+        rec.mapID = mapID
+        rec.continent = rec.continent or Compat.GetContinentName(mapID)
+        rec.revealed = Compat.GetRevealedAreaCount(mapID) or rec.revealed
+    end
+    rec.kills = rec.kills or 0
+    rec.subzones = rec.subzones or {}
     rec.isInstance = isInstance or nil
     return rec, isNew
 end
@@ -76,7 +118,10 @@ function Tracker:UpdateLocation()
     if not name then return end  -- zone text not ready yet (loading screen)
 
     loc.subzone = Compat.GetSubZone() or ""
-    if name == loc.zone then return end  -- same zone (reload, re-zone) - no entry
+    if name == loc.zone then
+        self:RecordSubZone()
+        return  -- same zone (reload, re-zone) - no entry
+    end
 
     loc.zone = name
     loc.mapID = mapID or 0
@@ -106,7 +151,9 @@ function Tracker:UpdateLocation()
             CoA.Feed:Add("zone_entered", { zone = name }, { dedupe = "zone" .. name, window = 20 })
         end
     end
+    self:RecordSubZone()
     CoA:Fire("LOCATION_CHANGED", name)
+    CoA:Fire("STATS_CHANGED", "zone")
 end
 
 CoA.Feed:RegisterKind("zone_recorded", {
@@ -133,6 +180,7 @@ function Tracker:OnQuestTurnedIn(_, questID, xpReward, moneyReward)
     if not entry then return end -- duplicate
 
     char.stats.questsCompleted = char.stats.questsCompleted + 1
+    CoA:Fire("STATS_CHANGED", "quest")
     local zone = char.location.zone
     if zone ~= "" and char.exploration.zones[zone] then
         local rec = char.exploration.zones[zone]
@@ -151,9 +199,22 @@ function Tracker:OnPlayerDead()
     local entry = CoA.Feed:Add("player_died", {}, { dedupe = "death", window = 10 })
     if not entry then return end
     char.stats.deaths = char.stats.deaths + 1
+    if CoA.Combat then CoA.Combat:OnPlayerDiedInRun() end
+    CoA:Fire("STATS_CHANGED", "death")
     local zone = char.location.zone
     if zone ~= "" and char.exploration.zones[zone] then
         local rec = char.exploration.zones[zone]
         rec.deaths = (rec.deaths or 0) + 1
     end
 end
+
+CoA.Feed:RegisterKind("area_discovered", {
+    category = "travel", icon = "Interface\\Icons\\INV_Misc_Spyglass_02",
+    text = function(d)
+        if d.area and d.zone and d.area ~= d.zone then
+            return "You uncovered " .. d.area .. " in " .. d.zone .. "."
+        end
+        return "You uncovered " .. (d.area or "a hidden place") .. "."
+    end,
+    journal = function(d) return "I found my way to " .. (d.area or "a place unmarked on my map") .. "." end,
+})

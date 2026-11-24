@@ -74,9 +74,13 @@ function Character:OnLevelUp(_, newLevel)
     if newLevel > char.progress.highestLevelSeen then
         char.progress.highestLevelSeen = newLevel
         char.stats.levelsGained = char.stats.levelsGained + 1
+        char.progress.levelHistory[newLevel] = {
+            t = time(), zone = char.location.zone ~= "" and char.location.zone or nil,
+        }
         CoA.Feed:Add("level_up", { level = newLevel }, { dedupe = "level" .. newLevel, window = 30 })
     end
     CoA:Fire("CHARACTER_UPDATED")
+    CoA:Fire("STATS_CHANGED", "level")
 end
 
 function Character:OnTimePlayed(_, total, thisLevel)

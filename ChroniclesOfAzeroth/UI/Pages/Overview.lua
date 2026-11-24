@@ -132,7 +132,7 @@ local function Create(parent)
     statsTitle:SetPoint("TOPLEFT", hero, "BOTTOMLEFT", 2, -20)
     page.statsTitle = statsTitle
     page.tiles = {}
-    for i = 1, 12 do page.tiles[i] = CreateTile(content) end
+    for i = 1, 15 do page.tiles[i] = CreateTile(content) end
 
     -- Whereabouts & recent entries -------------------------------------------
     page.whereTitle = SectionTitle(content, "Whereabouts")
@@ -219,7 +219,7 @@ local function Refresh(page)
     page.title:SetText(Character:GetTitle())
     page.identity:SetText(string.format("Level %d %s %s  %s %s", p.level, m.raceName, m.className,
         Theme.Hex(C.inkFaint) .. "\194\183|r", m.factionLocalized))
-    page.realm:SetText("of " .. m.realm)
+    page.realm:SetText(m.realm ~= "" and ("of " .. m.realm) or "")
 
     page.dayNumber:SetText(Character:GetAdventureDays())
     page.since:SetText("Chronicle begun " .. Util.FormatLongDate(m.chronicleStarted))
@@ -244,8 +244,8 @@ local function Refresh(page)
         "Distinct zones visited while the chronicle was open.")
     SetTile(T[3], "Interface\\Icons\\INV_Misc_Note_02", Util.FormatNumber(s.questsCompleted), "Quests completed",
         "Quests turned in since the chronicle began.")
-    SetTile(T[4], "Interface\\Icons\\Spell_Arcane_PortalOrgrimmar", Util.FormatNumber(s.instancesEntered), "Dungeons entered",
-        "Times you entered an instance. Completions are tracked from Phase 2.")
+    SetTile(T[4], "Interface\\Icons\\INV_Misc_Key_03", Util.FormatNumber(s.dungeonsCompleted), "Dungeons completed",
+        string.format("Dungeons finished (final boss defeated or dungeon finder reward). Entered %d times.", s.instancesEntered))
     SetTile(T[5], "Interface\\Icons\\Spell_Holy_SurgeOfLight", Util.FormatNumber(s.levelsGained), "Levels gained",
         string.format("Levels gained while the chronicle was open. You joined at level %d.", m.startLevel))
     SetTile(T[6], "Interface\\Icons\\INV_Misc_Bone_HumanSkull_01", Util.FormatNumber(s.deaths), "Deaths",
@@ -254,13 +254,20 @@ local function Refresh(page)
         "Play sessions (logins) recorded.")
     SetTile(T[8], "Interface\\Icons\\INV_Misc_Book_09", Util.FormatNumber(feedCount), "Chronicle entries",
         "Events written into your chronicle.")
-    SetTile(T[9], "Interface\\Icons\\Ability_DualWield", "Not yet recorded", "Enemies defeated",
-        "Arrives in Phase 2. The Forever client closes the combat log to addons, so kills need a verified source first.", true)
-    SetTile(T[10], "Interface\\Icons\\INV_Misc_Head_Dragon_01", "Not yet recorded", "Bosses & rares",
-        "Arrives in Phase 2, once boss and rare detection is verified on the Forever client.", true)
-    SetTile(T[11], "Interface\\Icons\\Spell_Holy_ChampionsBond", "Arrives in Phase 2", "Milestones unlocked",
-        "Custom milestones (achievements) are added in Phase 2.", true)
-    SetTile(T[12], "Interface\\Icons\\Ability_Warrior_BattleShout", "Arrives in Phase 3", "Active challenges",
+    local earned, totalMilestones = CoA.Achievements:CountUnlocked()
+    SetTile(T[9], "Interface\\Icons\\Ability_DualWield", Util.FormatNumber(s.kills), "Enemies defeated",
+        "Creatures you landed the killing blow on, or were fighting when they died. Kills inside dungeons cannot be seen by addons on Forever and are not counted.")
+    SetTile(T[10], "Interface\\Icons\\Ability_Warrior_DecisiveStrike", Util.FormatNumber(s.eliteKills), "Elites defeated",
+        "Elite enemies defeated in the open world.")
+    SetTile(T[11], "Interface\\Icons\\INV_Misc_Head_Dragon_01", string.format("%d / %d", s.rareKills, s.raresSeen), "Rares slain / spotted",
+        "Rare creatures slain, out of those you have spotted.")
+    SetTile(T[12], "Interface\\Icons\\INV_Misc_Bone_ElfSkull_01", Util.FormatNumber(s.bossesDefeated), "Bosses defeated",
+        "Dungeon and raid bosses defeated (encounter victories).")
+    SetTile(T[13], "Interface\\Icons\\INV_Misc_Spyglass_02", Util.FormatNumber(s.areasDiscovered), "Hidden places uncovered",
+        "New areas revealed on your world map.")
+    SetTile(T[14], "Interface\\Icons\\Spell_Holy_ChampionsBond", string.format("%d / %d", earned, totalMilestones), "Milestones earned",
+        "Open the Milestones chapter to see them all.")
+    SetTile(T[15], "Interface\\Icons\\Ability_Warrior_BattleShout", "Arrives in Phase 3", "Active challenges",
         "Personal challenges are added in Phase 3.", true)
 
     -- Whereabouts -----------------------------------------------------------

@@ -63,15 +63,15 @@ RAID_CLASS_COLORS = { DRUID = { r = 1, g = 0.49, b = 0.04 } }
 Enum = { UIMapType = { Cosmic=0, World=1, Continent=2, Zone=3, Dungeon=4, Micro=5, Orphan=6 } }
 CreateColor = function(r,g,b,a) return {r,g,b,a} end
 GetCursorPosition = function() return 0, 0 end
-InCombatLockdown = function() return false end
+InCombatLockdown = function() return STATE.combat and true or false end
 SetPortraitTexture = function() end
 issecretvalue = function() return false end
 
 -- Game state the tests manipulate
 STATE = { level = 5, zone = "Mulgore", sub = "Bloodhoof Village", inst = false, instName = nil, now = 1795000000, gt = 100 }
-UnitName = function() return "Mara" end
+UnitName = function(u) if u == nil or u == "player" then return "Mara" end local x = UNITS[u] return x and x.name end
 UnitFullName = function() return "Mara", nil end
-GetRealmName = function() return "Forever" end
+GetRealmName = function() return STATE.realm or "" end  -- Forever build 71037 returns ""
 UnitClass = function() return "Druid", "DRUID" end
 UnitRace = function() return "Tauren", "Tauren" end
 UnitFactionGroup = function() return "Horde", "Horde" end
@@ -87,8 +87,25 @@ GetInstanceInfo = function()
 end
 C_Map = {
   GetBestMapForUnit = function() return 7 end,
-  GetMapInfo = function(id) return { mapID = id, mapType = 3, parentMapID = 12, name = STATE.zone } end,
+  GetMapInfo = function(id) if id == 12 then return { mapID = 12, mapType = 2, parentMapID = 0, name = "Kalimdor" } end return { mapID = id, mapType = 3, parentMapID = 12, name = STATE.zone } end,
 }
+UNITS = {}   -- tests put unit tables here: UNITS.target = { guid=..., name=..., class=..., ... }
+SECRET = {}
+local function U(unit) return UNITS[unit] end
+UnitExists = function(u) return U(u) ~= nil or u == "player" end
+UnitGUID = function(u) if u == "player" then return "Player-1-0001" end local x = U(u) return x and x.guid end
+UnitIsPlayer = function(u) return u == "player" end
+UnitCanAttack = function(a, u) local x = U(u) return x and not x.friendly end
+UnitClassification = function(u) local x = U(u) return x and x.class or "normal" end
+UnitCreatureType = function(u) local x = U(u) return x and x.ctype end
+UnitIsTapDenied = function(u) local x = U(u) return x and x.tapDenied end
+UnitIsDead = function(u) local x = U(u) return x and x.dead end
+UnitAffectingCombat = function(u) if u == "player" then return STATE.combat end local x = U(u) return x and x.combat end
+issecretvalue = function(v) return SECRET[v] == true end
+C_Timer = { After = function(_, fn) fn() end }
+C_MapExplorationInfo = { GetExploredMapTextures = function() return { {}, {}, {} } end }
+EJ_GetInstanceForMap = function() if STATE.inst then return 240 end return 0 end
+EJ_GetEncounterInfoByIndex = function(i) local b = ({ "Lady Anacondra", "Lord Cobrahn", "Mutanus the Devourer" })[i] if b then return b, "", 100 + i, 0, 0, 0, 1000 + i end end
 C_QuestLog = { GetTitleForQuestID = function(id) if id == 1 then return "The Hunt Begins" end end }
 GetTitleText = function() return "Rite of Strength" end
 RequestTimePlayed = function() TIME_PLAYED_REQUESTED = true end

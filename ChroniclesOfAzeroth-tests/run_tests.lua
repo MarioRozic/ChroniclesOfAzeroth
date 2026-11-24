@@ -1,5 +1,7 @@
 dofile("/home/user/coa/test/mockwow.lua")
 local CoA = NS
+-- Phase 1 checks count feed entries exactly; milestones are tested in run_tests2.lua.
+CoA.Achievements.Evaluate = function() return 0 end
 local fails = 0
 local function check(cond, msg) if cond then print("ok   " .. msg) else print("FAIL " .. msg); fails = fails + 1 end end
 
@@ -109,6 +111,7 @@ local saved = ChroniclesOfAzerothDB
 saved.characters["Mara-Forever"].stats = nil
 saved.characters["Mara-Forever"].progress.level = "oops"
 dofile("/home/user/coa/test/mockwow.lua")  -- fresh addon instance, same saved table
+NS.Achievements.Evaluate = function() return 0 end
 ChroniclesOfAzerothDB = saved
 STATE.level = 9
 FireEvent("ADDON_LOADED", "ChroniclesOfAzeroth")

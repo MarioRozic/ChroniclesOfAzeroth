@@ -61,10 +61,28 @@ end
 ---------------------------------------------------------------------------
 -- Player identity
 ---------------------------------------------------------------------------
+-- Realm name, or nil when the client does not report one. Verified in game
+-- (build 71037): Forever returned an empty realm name, so every source is
+-- tried and an empty string counts as "unknown".
+function Compat.GetRealm()
+    local candidates = {}
+    if GetNormalizedRealmName then candidates[#candidates + 1] = GetNormalizedRealmName() end
+    if GetRealmName then candidates[#candidates + 1] = GetRealmName() end
+    if UnitFullName then
+        local _, r = UnitFullName("player")
+        candidates[#candidates + 1] = r
+    end
+    for _, r in ipairs(candidates) do
+        r = Clean(r)
+        if type(r) == "string" then return r end
+    end
+    return nil
+end
+
 function Compat.GetPlayerIdentity()
-    local name, realm = UnitFullName and UnitFullName("player")
+    local name = UnitFullName and UnitFullName("player")
     name = Clean(name) or UnitName("player")
-    realm = Clean(realm) or (GetRealmName and GetRealmName()) or "UnknownRealm"
+    local realm = Compat.GetRealm()
 
     local className, classFile = UnitClass("player")
     local raceName, raceFile = UnitRace("player")
@@ -72,7 +90,7 @@ function Compat.GetPlayerIdentity()
 
     return {
         name = name or "Unknown",
-        realm = realm,
+        realm = realm or "",
         className = className or "Unknown",
         classFile = classFile or "WARRIOR",
         raceName = raceName or "Unknown",
@@ -186,4 +204,111 @@ end
 
 function Compat.InCombat()
     return InCombatLockdown and InCombatLockdown() or false
+end
+
+---------------------------------------------------------------------------
+-- Units (Phase 2)
+--
+-- On Forever, creature names, GUIDs and IDs are "secret" inside instances,
+-- and comparing a secret value raises a Lua error. Every unit value goes
+-- through Safe(), which turns secrets into nil, before it is compared.
+---------------------------------------------------------------------------
+local function Safe(value)
+    if value == nil or Compat.IsSecret(value) then return nil end
+    return value
+end
+Compat.Safe = Safe
+
+local function SafeCall(fn, ...)
+    if not fn then return nil end
+    local ok, a, b = pcall(fn, ...)
+    if not ok then return nil end
+    return Safe(a), Safe(b)
+end
+
+function Compat.UnitGUID(unit)
+    return SafeCall(UnitGUID, unit)
+end
+
+local playerGUID
+function Compat.PlayerGUID()
+    playerGUID = playerGUID or Compat.UnitGUID("player")
+    return playerGUID
+end
+
+-- Snapshot of an attackable creature, or nil if it is not one or its
+-- identity is hidden. classification: "normal", "elite", "rare",
+-- "rareelite", "worldboss", "trivial", "minus".
+function Compat.GetCreatureInfo(unit)
+    if not (UnitExists and UnitExists(unit)) then return nil end
+    if UnitIsPlayer and SafeCall(UnitIsPlayer, unit) then return nil end
+    if UnitCanAttack and not SafeCall(UnitCanAttack, "player", unit) then return nil end
+    local guid = Compat.UnitGUID(unit)
+    local name = SafeCall(UnitName, unit)
+    if not guid or not name then return nil end
+    -- Pets and other players' guardians are not creatures worth recording.
+    if type(guid) ~= "string" or not (string.find(guid, "^Creature") or string.find(guid, "^Vehicle")) then
+        return nil
+    end
+    return {
+        guid = guid,
+        name = name,
+        classification = SafeCall(UnitClassification, unit) or "normal",
+        creatureType = SafeCall(UnitCreatureType, unit),
+        level = SafeCall(UnitLevel, unit),
+        tapDenied = SafeCall(UnitIsTapDenied, unit) and true or false,
+        dead = SafeCall(UnitIsDead, unit) and true or false,
+    }
+end
+
+---------------------------------------------------------------------------
+-- Map exploration (Phase 2). Returns the number of map overlays the client
+-- reports as revealed for a zone map, or nil when the API is unavailable.
+-- There is no API for the total, so no percentage is derived from this.
+---------------------------------------------------------------------------
+function Compat.GetRevealedAreaCount(mapID)
+    if not (mapID and C_MapExplorationInfo and C_MapExplorationInfo.GetExploredMapTextures) then
+        return nil
+    end
+    local ok, textures = pcall(C_MapExplorationInfo.GetExploredMapTextures, mapID)
+    if ok and type(textures) == "table" then return #textures end
+    return nil
+end
+
+-- Name of the continent a zone map belongs to, or nil.
+function Compat.GetContinentName(mapID)
+    if not (mapID and C_Map and C_Map.GetMapInfo and Enum and Enum.UIMapType) then return nil end
+    local info = C_Map.GetMapInfo(mapID)
+    local guard = 0
+    while info and guard < 8 do
+        if info.mapType == Enum.UIMapType.Continent then return Safe(info.name) end
+        if not info.parentMapID or info.parentMapID == 0 then return nil end
+        info = C_Map.GetMapInfo(info.parentMapID)
+        guard = guard + 1
+    end
+    return nil
+end
+
+---------------------------------------------------------------------------
+-- Dungeon structure via the Encounter Journal (Phase 2), if the client has
+-- it. Returns an ordered list of encounter names for the current instance,
+-- or nil. Used to recognise the final boss of a dungeon.
+---------------------------------------------------------------------------
+function Compat.GetInstanceEncounters()
+    if not (EJ_GetInstanceForMap and EJ_GetEncounterInfoByIndex and C_Map and C_Map.GetBestMapForUnit) then
+        return nil
+    end
+    local mapID = C_Map.GetBestMapForUnit("player")
+    if not mapID then return nil end
+    local ok, journalInstanceID = pcall(EJ_GetInstanceForMap, mapID)
+    if not ok or not journalInstanceID or journalInstanceID == 0 then return nil end
+    local list = {}
+    for i = 1, 30 do
+        local ok2, name, _, journalEncounterID, _, _, _, dungeonEncounterID =
+            pcall(EJ_GetEncounterInfoByIndex, i, journalInstanceID)
+        if not ok2 or not name then break end
+        list[#list + 1] = { name = Safe(name), journalID = journalEncounterID, encounterID = dungeonEncounterID }
+    end
+    if #list == 0 then return nil end
+    return list
 end

@@ -25,7 +25,7 @@ local Util = CoA.Util
 local DB = {}
 CoA.Database = DB
 
-DB.SCHEMA_VERSION = 1
+DB.SCHEMA_VERSION = 2
 
 local SETTINGS_DEFAULTS = {
     debug = false,
@@ -57,6 +57,7 @@ local CHAR_DEFAULTS = {
         timePlayedTotal = 0,      -- seconds, from TIME_PLAYED_MSG (0 = unknown)
         timePlayedLevel = 0,
         timePlayedStamp = 0,      -- time() when the two values above were read
+        levelHistory = {},        -- [level] = { t, zone } for levels reached while recorded
     },
     stats = {
         sessions = 0,
@@ -65,12 +66,23 @@ local CHAR_DEFAULTS = {
         levelsGained = 0,         -- levels gained while the addon was installed
         zonesDiscovered = 0,
         instancesEntered = 0,
-        -- Reserved for Phase 2 (need verification on the Forever client):
-        kills = 0, rareKills = 0, dungeonsCompleted = 0, bossesDefeated = 0,
+        -- Phase 2 (see Modules/Combat.lua and Tracker.lua for sources):
+        kills = 0, eliteKills = 0, rareKills = 0, raresSeen = 0,
+        dungeonsCompleted = 0, bossesDefeated = 0,
+        areasDiscovered = 0, subzonesDiscovered = 0,
+    },
+    combat = {
+        creatureTypes = {},   -- [creatureType] = kills
+        rares = {},           -- [name] = { firstSeen, zone, level, elite, kills, lastKill }
+        bosses = {},          -- [encounterName] = { first, last, count, instance }
+        dungeons = {},        -- [instanceName] = { first, last, completions, fastest, deathless }
+        killsByDay = {},      -- ["2026-11-24"] = kills, for the journal
     },
     location = { zone = "", subzone = "", mapID = 0, instance = "" },
     feed = { nextId = 1, entries = {} },
-    exploration = { zones = {} },  -- [zoneName] = { firstVisit, lastVisit, visits, mapID }
+    -- [zoneName] = { firstVisit, lastVisit, visits, mapID, continent, quests,
+    --               deaths, kills, subzones = { [name] = firstVisit }, revealed }
+    exploration = { zones = {} },
     -- Reserved for later phases; created now so migrations stay trivial.
     achievements = { unlocked = {} },
     challenges = { active = {}, completed = {} },
@@ -84,9 +96,21 @@ DB.CHAR_DEFAULTS = CHAR_DEFAULTS
 -- Migrations. MIGRATIONS[n] upgrades a schema n-1 database to schema n.
 ---------------------------------------------------------------------------
 local MIGRATIONS = {
-    -- [2] = function(db)
-    --     for key, char in pairs(db.characters) do ... end
-    -- end,
+    -- v2 (addon 0.2.0): zone records gain kill and sub-zone tracking.
+    [2] = function(db)
+        for _, char in pairs(db.characters) do
+            local zones = type(char) == "table" and type(char.exploration) == "table"
+                and char.exploration.zones
+            if type(zones) == "table" then
+                for _, rec in pairs(zones) do
+                    if type(rec) == "table" then
+                        rec.kills = tonumber(rec.kills) or 0
+                        if type(rec.subzones) ~= "table" then rec.subzones = {} end
+                    end
+                end
+            end
+        end
+    end,
 }
 
 local function RunMigrations(db)
@@ -134,16 +158,26 @@ function DB:Initialize()
     CoA.isFirstInstall = isNew
 end
 
+-- When the client reports no realm name (seen on Forever build 71037) the
+-- key becomes "Name-Forever". v0.1.0 stored such characters as "Name-";
+-- LoadCharacter moves that record to the new key.
+DB.NO_REALM = "Forever"
+
 function DB:GetCharacterKey()
     local name = UnitName("player") or "Unknown"
-    local realm = (GetRealmName and GetRealmName()) or "UnknownRealm"
-    return name .. "-" .. realm
+    return name .. "-" .. (CoA.Compat.GetRealm() or DB.NO_REALM), name
 end
 
 -- Called on PLAYER_LOGIN, when unit information is reliable.
 function DB:LoadCharacter()
-    local key = self:GetCharacterKey()
+    local key, name = self:GetCharacterKey()
     local chars = CoA.db.characters
+    -- Carry over a v0.1.0 record saved without a realm ("Name-").
+    local legacyKey = name .. "-"
+    if type(chars[key]) ~= "table" and type(chars[legacyKey]) == "table" then
+        chars[key] = chars[legacyKey]
+        chars[legacyKey] = nil
+    end
     local isNew = type(chars[key]) ~= "table"
 
     local char = Util.ApplyDefaults(chars[key], CHAR_DEFAULTS)

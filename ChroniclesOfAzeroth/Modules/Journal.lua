@@ -18,6 +18,7 @@ local cache, dirty = nil, true
 
 function Journal:OnInitialize()
     CoA:On("FEED_ENTRY_ADDED", self, function() dirty = true end)
+    CoA:On("STATS_CHANGED", self, function() dirty = true end)
 end
 
 local function JoinList(list)
@@ -30,13 +31,14 @@ end
 
 -- Kinds that are summarised per day instead of written one by one.
 local SUMMARISED = { quest_completed = true, player_died = true, zone_entered = true, session_start = true,
-                     zone_discovered = true, zone_recorded = true }
+                     zone_discovered = true, zone_recorded = true, achievement = true,
+                     area_discovered = true }
 
 local function BuildChapter(dayKey, entries)
     local Feed = CoA.Feed
     local zoneOrder, zoneSeen, zoneCount = {}, {}, {}
     local quests, questTitles, deaths = 0, {}, 0
-    local discovered, recorded = {}, {}
+    local discovered, recorded, milestones, areas = {}, {}, {}, {}
     local sentences, sentenceSeen = {}, {}
 
     for _, e in ipairs(entries) do
@@ -58,6 +60,11 @@ local function BuildChapter(dayKey, entries)
             discovered[#discovered + 1] = e.d.zone
         elseif e.kind == "zone_recorded" and e.d.zone then
             recorded[#recorded + 1] = e.d.zone
+        elseif e.kind == "achievement" and e.d.name then
+            milestones.total = (milestones.total or 0) + 1
+            if #milestones < 4 then milestones[#milestones + 1] = "\"" .. e.d.name .. "\"" end
+        elseif e.kind == "area_discovered" and e.d.area and #areas < 4 then
+            areas[#areas + 1] = e.d.area
         elseif not SUMMARISED[e.kind] then
             local s = Feed:FormatJournal(e)
             if s and not sentenceSeen[s] then
@@ -86,6 +93,9 @@ local function BuildChapter(dayKey, entries)
     if #recorded > 0 then
         sentences[#sentences + 1] = "I made note of " .. JoinList(recorded) .. " in my journal."
     end
+    if #areas > 0 then
+        sentences[#sentences + 1] = "Off the beaten road I found " .. JoinList(areas) .. "."
+    end
     if #sentences > 0 then
         paragraphs[#paragraphs + 1] = table.concat(sentences, " ")
     end
@@ -103,7 +113,20 @@ local function BuildChapter(dayKey, entries)
     elseif deaths > 1 then
         deeds[#deeds + 1] = string.format("I fell in battle %d times, yet each time I rose again.", deaths)
     end
+    local kills = CoA.char and CoA.char.combat and CoA.char.combat.killsByDay[dayKey]
+    if kills and kills > 0 then
+        deeds[#deeds + 1] = kills == 1 and "One enemy fell to my hand."
+            or string.format("%d enemies fell before me.", kills)
+    end
     if #deeds > 0 then paragraphs[#paragraphs + 1] = table.concat(deeds, " ") end
+    if #milestones > 0 then
+        local extra = (milestones.total or 0) - #milestones
+        if extra > 0 then
+            milestones[#milestones + 1] = extra == 1 and "one more" or (extra .. " more")
+        end
+        paragraphs[#paragraphs + 1] = ((milestones.total or 0) == 1 and "A day worth remembering: I earned the milestone "
+            or "A day worth remembering: I earned the milestones ") .. JoinList(milestones) .. "."
+    end
 
     local t = entries[1].t
     return {

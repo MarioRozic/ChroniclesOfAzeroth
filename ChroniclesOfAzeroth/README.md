@@ -4,7 +4,7 @@ An RPG companion for **World of Warcraft: Forever**: a travel journal, a charact
 profile and a chronicle of everything you really did on your journey. It never
 plays the game for you and never invents events.
 
-Version 0.1.0 (Phase 1).
+Version 0.2.0 (Phase 2: exploration, progression and milestones).
 
 ## Client compatibility
 
@@ -34,14 +34,16 @@ Version 0.1.0 (Phase 1).
   compartment button by the minimap do the same (right-click opens Event History).
 - `/coa journal`, `/coa profile`, `/coa history`, `/coa exploration` open a chapter.
 - `/coa scale 0.9`, `/coa resetpos`, `/coa minimap off|on`
-- `/coa status` prints the client version, interface number and any event the
-  client refused to register.
+- `/coa milestones` opens the Milestones chapter; `/coa toast` previews a
+  milestone notification.
+- `/coa status` prints the client version, interface number, your tallies, which
+  kill sources are active, and any event the client refused to register.
 - `/coa reset confirm` erases this character's chronicle.
 
 Drag the title to move the window, drag the bottom-right grip to resize it,
 press Escape to close it.
 
-## What it records (Phase 1)
+## What it records
 
 | Event | Source |
 |---|---|
@@ -52,6 +54,16 @@ press Escape to close it.
 | Quests completed (with title) | `QUEST_TURNED_IN`, `QUEST_COMPLETE` |
 | Deaths | `PLAYER_DEAD` |
 | Time played | `TIME_PLAYED_MSG` (requested once per session, when you open the profile) |
+| Named places, hidden places uncovered | `ZONE_CHANGED`, `MAP_EXPLORATION_UPDATED`, `C_MapExplorationInfo` |
+| Enemies defeated (open world) | `PARTY_KILL` (your or your pet's killing blow), `UNIT_DIED` for a creature you were fighting and that was not tapped by others |
+| Elites, rares, creature types | `UnitClassification`, `UnitCreatureType` on your target, mouseover and nameplates |
+| Bosses defeated | `ENCOUNTER_END` with success |
+| Dungeons completed | final Encounter Journal boss defeated, all bosses defeated, or `LFG_COMPLETION_REWARD` |
+| Milestones | 45 definitions in `Data/Achievements.lua`, judged only on the data above |
+
+Kills inside instances are not counted: Forever hides creature identity from
+addons there. Milestones earned from data recorded before they existed are
+unlocked quietly at login, with one summary notice.
 
 Data is saved per character (`Name-Realm`) in
 `WTF/Account/<ACCOUNT>/SavedVariables/ChroniclesOfAzeroth.lua`.
@@ -62,8 +74,10 @@ Data is saved per character (`Name-Realm`) in
 Core/      Init (namespace, modules, message bus), Util, Compat (all client API
            access), Database (SavedVariables, defaults, migrations), Events
            (single event frame), Bootstrap (startup + slash commands)
-Modules/   EventFeed (feed storage + entry kinds), Character, Tracker, Journal
-UI/        Theme, Widgets, MainFrame, MinimapButton, Pages/*
+Modules/   EventFeed (feed storage + entry kinds), Character, Tracker, Journal,
+           Combat (kills, rares, bosses, dungeon runs), Achievements
+Data/      Achievements (milestone definitions)
+UI/        Theme, Widgets, MainFrame, Toast, MinimapButton, Pages/*
 ```
 
 To add a feature: create a module with `CoA:NewModule("Name")`, register events

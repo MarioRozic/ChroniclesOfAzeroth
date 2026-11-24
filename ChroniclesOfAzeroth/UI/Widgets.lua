@@ -297,3 +297,31 @@ function Widgets.Chip(parent, text)
     end
     return b
 end
+
+---------------------------------------------------------------------------
+-- ProgressBar (Phase 2): thin gold bar with an optional "12 / 50" label.
+---------------------------------------------------------------------------
+function Widgets.ProgressBar(parent, width, height)
+    local bar = CreateFrame("Frame", nil, parent)
+    bar:SetSize(width or 120, height or 8)
+    local bg = Theme.SolidTexture(bar, "BACKGROUND", C.inset)
+    bg:SetAllPoints()
+    bar.edges = Theme.Border(bar, C.goldFaint)
+    local fill = Theme.HGradientTexture(bar, "ARTWORK", C.goldDim, C.gold)
+    fill:SetPoint("TOPLEFT", 1, -1)
+    fill:SetPoint("BOTTOMLEFT", 1, 1)
+    fill:SetWidth(1)
+    bar.fill = fill
+    bar.label = Theme.Text(bar, 10, C.inkMuted)
+    bar.label:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, 3)
+    bar.label:SetJustifyH("RIGHT")
+
+    function bar:SetProgress(current, max, text)
+        local frac = (max and max > 0) and math.max(0, math.min(1, current / max)) or 0
+        local w = math.max(1, (self:GetWidth() - 2) * frac)
+        self.fill:SetWidth(w)
+        self.fill:SetShown(frac > 0)
+        self.label:SetText(text or "")
+    end
+    return bar
+end

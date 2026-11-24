@@ -58,6 +58,8 @@ local function PrintHelp()
         "/coa scale <0.6-1.5> - window scale",
         "/coa resetpos - reset window position and size",
         "/coa minimap on|off - show or hide the minimap button",
+        "/coa milestones - open the Milestones chapter",
+        "/coa toast - preview a milestone notification",
         "/coa status - client and data diagnostics",
         "/coa reset confirm - erase this character's chronicle",
     }
@@ -72,6 +74,16 @@ local function PrintStatus()
     if char then
         CoA:Print(string.format("%s: %d feed entries, %d regions, schema v%d",
             CoA.charKey, #char.feed.entries, CoA.Util.CountKeys(char.exploration.zones), CoA.db.schemaVersion))
+    end
+    local s = char and char.stats
+    if s then
+        CoA:Print(string.format("kills %d, elites %d, rares %d/%d, bosses %d, dungeons %d, hidden places %d",
+            s.kills, s.eliteKills, s.rareKills, s.raresSeen, s.bossesDefeated, s.dungeonsCompleted, s.areasDiscovered))
+        local run = CoA.Combat:GetRun()
+        CoA:Print("kill sources: PARTY_KILL" .. (CoA.unsupportedEvents.PARTY_KILL and " (missing)" or "") ..
+            ", UNIT_DIED" .. (CoA.unsupportedEvents.UNIT_DIED and " (missing, using target fallback)" or "") ..
+            "; dungeon journal: " .. (CoA.Compat.GetInstanceEncounters() and "available here" or "not available here") ..
+            (run and ("; current run: " .. run.name .. ", " .. run.defeatedCount .. " bosses") or ""))
     end
     local missing = {}
     for event in pairs(CoA.unsupportedEvents) do missing[#missing + 1] = event end
@@ -98,6 +110,10 @@ local function HandleSlash(msg)
         PrintHelp()
     elseif cmd == "status" then
         PrintStatus()
+    elseif cmd == "toast" then
+        CoA.Toast:Preview()
+    elseif cmd == "milestones" or cmd == "achievements" then
+        CoA.UI:Show("achievements")
     elseif cmd == "scale" then
         local s = tonumber(rest)
         if s then CoA.UI:SetScale(s) else CoA:Print("usage: /coa scale 0.9") end
