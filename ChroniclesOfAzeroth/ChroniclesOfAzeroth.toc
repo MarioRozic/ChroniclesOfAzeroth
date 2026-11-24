@@ -2,7 +2,7 @@
 ## Title: |cffd4af37Chronicles of Azeroth|r
 ## Notes: An RPG journal, character profile and adventure chronicle for your journey through Azeroth.
 ## Author: Mara
-## Version: 0.5.0
+## Version: 0.5.1
 ## SavedVariables: ChroniclesOfAzerothDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## AddonCompartmentFunc: ChroniclesOfAzeroth_OnAddonCompartmentClick

@@ -323,6 +323,17 @@ function Compat.SendChat(msg, chatType, target)
     return pcall(fn, msg, chatType, nil, target)
 end
 
+-- Puts text into the chat box with the channel's slash prefix, ready for the
+-- player to press Enter. Nothing is sent by the addon, so no protected call
+-- is made (Say, Yell and channels are blocked for addons outside a hardware
+-- event, and some clients block them for addons entirely).
+local SLASH = { SAY = "/s ", PARTY = "/p ", INSTANCE_CHAT = "/i ", GUILD = "/g ", RAID = "/ra " }
+function Compat.OpenChatWith(text, chatType)
+    local fn = (ChatFrameUtil and ChatFrameUtil.OpenChat) or ChatFrame_OpenChat
+    if not fn then return false end
+    return (pcall(fn, (SLASH[chatType] or "") .. text))
+end
+
 -- Whether a chat channel can be used right now.
 function Compat.CanUseChannel(chatType)
     if chatType == "GUILD" then return IsInGuild and IsInGuild() and true or false end

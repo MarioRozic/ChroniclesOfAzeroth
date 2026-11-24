@@ -160,7 +160,8 @@ IsInGuild = function() return STATE.guild and true or false end
 UnitIsUnit = function(a, b) return a == b end
 GetUnitName = function(u) local x = UNITS[u] if u == "player" then return "Mara" end return x and x.name end
 LE_PARTY_CATEGORY_INSTANCE = 2
-CHAT_SENT, ADDON_SENT = {}, {}
+CHAT_SENT, ADDON_SENT, CHAT_OPENED = {}, {}, {}
+function ChatFrame_OpenChat(text) CHAT_OPENED[#CHAT_OPENED + 1] = text end
 C_ChatInfo = {
   SendChatMessage = function(msg, chatType) CHAT_SENT[#CHAT_SENT + 1] = { msg = msg, chatType = chatType } end,
   RegisterAddonMessagePrefix = function() return true end,

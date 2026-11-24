@@ -62,7 +62,9 @@ check(g == 5, "at most 5 guild lines an hour (" .. g .. ")")
 
 -- 2. Brag ---------------------------------------------------------------------------
 before = #CHAT_SENT
-check(Share:Brag(Share:ProfileLine(), "SAY") and CHAT_SENT[#CHAT_SENT].chatType == "SAY", "brag to say")
+check(Share:Brag(Share:ProfileLine(), "SAY") and #CHAT_SENT == before, "brag to say sends nothing itself")
+check(CHAT_OPENED[#CHAT_OPENED] and CHAT_OPENED[#CHAT_OPENED]:find("^/s %[Chronicles%]"), "brag to say opens the chat box with /s")
+print("     chat box: " .. tostring(CHAT_OPENED[#CHAT_OPENED]))
 STATE.guild = false
 check(not Share:Brag(Share:ProfileLine(), "GUILD"), "brag to guild refused when not in a guild")
 print("     brag: " .. CHAT_SENT[#CHAT_SENT].msg)
@@ -150,5 +152,18 @@ if b:IsEnabled() ~= false then
   menu.buttons[2]._scripts.OnClick(menu.buttons[2])
   check(#CHAT_SENT == before + 1 and CHAT_SENT[#CHAT_SENT].chatType == "PARTY", "brag to party from the menu")
 end
+-- v0.5.1: the client blocks one of our chat sends -> fall back to the chat box
+FireEvent("ADDON_ACTION_BLOCKED", "SomeOtherAddon", "SendChatMessage()")
+check(not Share.chatBlocked, "other addons' blocked actions are ignored")
+FireEvent("ADDON_ACTION_BLOCKED", CoA.name, "C_ChatInfo.SendChatMessage()")
+check(Share.chatBlocked, "our blocked chat send is noticed")
+STATE.guild = true
+before = #CHAT_SENT
+local opened = #CHAT_OPENED
+check(Share:Brag(Share:ProfileLine(), "GUILD") and #CHAT_SENT == before and #CHAT_OPENED == opened + 1
+  and CHAT_OPENED[#CHAT_OPENED]:find("^/g "), "after a block, guild brag goes to the chat box")
+STATE.now = STATE.now + 7200
+CoA.Achievements:Unlock(L[40]); RunTimers()
+check(#CHAT_SENT == before, "announcements pause after a block")
 SlashCmdList["CHRONICLESOFAZEROTH"]("status")
 print(fails == 0 and "ALL PASSED" or (fails .. " FAILED"))

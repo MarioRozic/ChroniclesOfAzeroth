@@ -13,7 +13,7 @@ local ADDON_NAME, CoA = ...
 
 CoA.name = ADDON_NAME
 CoA.displayName = "Chronicles of Azeroth"
-CoA.version = "0.5.0"
+CoA.version = "0.5.1"
 
 -- Exposed globally only so other addons (and /dump) can inspect it. Nothing in
 -- this addon reads the global; all files use the private namespace.

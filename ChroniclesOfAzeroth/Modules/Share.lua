@@ -45,6 +45,8 @@ function Share:OnEnable()
     CoA:RegisterEvent("CHAT_MSG_ADDON", self, "OnAddonMessage")
     CoA:RegisterEvent("PLAYER_REGEN_ENABLED", self, "Flush")
     CoA:RegisterEvent("ENCOUNTER_END", self, "Flush")
+    CoA:RegisterEvent("ADDON_ACTION_BLOCKED", self, "OnActionBlocked")
+    CoA:RegisterEvent("ADDON_ACTION_FORBIDDEN", self, "OnActionBlocked")
     CoA:On("ACHIEVEMENT_UNLOCKED", self, function(_, def, quiet)
         if not quiet then self:QueueAnnouncement(def) end
     end)
@@ -132,6 +134,7 @@ function Share:Flush()
         return
     end
     if Busy() then return end   -- PLAYER_REGEN_ENABLED / ENCOUNTER_END call again
+    if self.chatBlocked then pending = {}; self:PumpQueue(); return end
     local now = time()
     local text
     if #pending == 1 then
@@ -166,7 +169,10 @@ Share.BRAG_CHANNELS = {
     { key = "GUILD", label = "Guild" },
 }
 
--- Only call from a click: Say needs a hardware event in the open world.
+-- Say is never sent by the addon: the line is put in the chat box and the
+-- player presses Enter (v0.5.1; sending Say from the addon raised "Interface
+-- action failed because of an AddOn"). Party and Guild are sent directly,
+-- unless the client has blocked one of our chat sends this session.
 function Share:Brag(text, channel)
     if channel == "PARTY" then channel = Compat.GroupChannel() or "PARTY" end
     if not Compat.CanUseChannel(channel) then
@@ -174,7 +180,27 @@ function Share:Brag(text, channel)
         return false
     end
     Settings().bragChannel = channel == "INSTANCE_CHAT" and "PARTY" or channel
+    if channel == "SAY" or self.chatBlocked then
+        if Compat.OpenChatWith(text, channel) then return true end
+        CoA:Print("could not open the chat box.")
+        return false
+    end
     return Compat.SendChat(text, channel)
+end
+
+-- The client refused a protected call from this addon. If it was a chat send,
+-- stop sending chat ourselves for the rest of the session: Brag falls back
+-- to the chat box and announcements pause.
+function Share:OnActionBlocked(_, addon, func)
+    if addon ~= CoA.name then return end
+    func = tostring(func or "")
+    if func:find("Chat") or func == "" then
+        if not self.chatBlocked then
+            CoA:Print("the game blocked a chat message from this addon (" .. (func ~= "" and func or "unknown") ..
+                "). Brag will put the line in your chat box instead, and announcements are paused until you reload.")
+        end
+        self.chatBlocked = true
+    end
 end
 
 ---------------------------------------------------------------------------

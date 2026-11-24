@@ -4,7 +4,7 @@ An RPG companion for **World of Warcraft: Forever**: a travel journal, a charact
 profile and a chronicle of everything you really did on your journey. It never
 plays the game for you and never invents events.
 
-Version 0.5.0 (sharing: announcements, Brag and Fellows).
+Version 0.5.1 (sharing: announcements, Brag and Fellows).
 
 ## Client compatibility
 
@@ -67,7 +67,10 @@ Notifications never appear during combat: they wait until combat ends.
   nothing during combat or a boss fight; never for milestones recorded quietly at login.
 - **Brag**: the Brag button on the Character page (your journey) and on an earned
   milestone posts one line to Say, Party or Guild, picked from a small menu.
-  `/coa brag guild` does the same from chat.
+  `/coa brag guild` does the same from chat. For Say the line is put in your chat
+  box and you press Enter (the game does not let addons speak in Say). If the game
+  ever blocks a Party or Guild line, Brag falls back to the chat box the same way
+  and announcements pause until you reload.
 - **Fellows**: target a player who also uses the addon and press Inspect Target
   (or `/coa inspect`, or "View Chronicle" in the player's right-click menu). Their
   title, totals and milestones are compared with yours. It uses hidden whispered
