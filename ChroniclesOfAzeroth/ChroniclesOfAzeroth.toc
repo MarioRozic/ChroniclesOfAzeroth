@@ -1,0 +1,40 @@
+## Interface: 16001
+## Title: |cffd4af37Chronicles of Azeroth|r
+## Notes: An RPG journal, character profile and adventure chronicle for your journey through Azeroth.
+## Author: Mara
+## Version: 0.1.0
+## SavedVariables: ChroniclesOfAzerothDB
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+## AddonCompartmentFunc: ChroniclesOfAzeroth_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: ChroniclesOfAzeroth_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: ChroniclesOfAzeroth_OnAddonCompartmentLeave
+## X-Phase: 1
+
+# Target client: World of Warcraft: Forever 1.60.x (game type "forever"/"camelot",
+# interface 16001), which runs on the Mainline (Midnight 12.1.x) code base.
+
+# --- Core -------------------------------------------------------------------
+Core\Init.lua
+Core\Util.lua
+Core\Compat.lua
+Core\Database.lua
+Core\Events.lua
+
+# --- Gameplay modules --------------------------------------------------------
+Modules\EventFeed.lua
+Modules\Character.lua
+Modules\Tracker.lua
+Modules\Journal.lua
+
+# --- User interface ----------------------------------------------------------
+UI\Theme.lua
+UI\Widgets.lua
+UI\MainFrame.lua
+UI\Pages\Overview.lua
+UI\Pages\Journal.lua
+UI\Pages\EventHistory.lua
+UI\Pages\Upcoming.lua
+UI\MinimapButton.lua
+
+# --- Bootstrap (must be last) -------------------------------------------------
+Core\Bootstrap.lua
