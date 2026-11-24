@@ -17,6 +17,7 @@
 
 local _, CoA = ...
 local Theme = CoA.Theme
+local Util = CoA.Util
 local C = Theme.C
 local Widgets = {}
 CoA.Widgets = Widgets
@@ -46,6 +47,7 @@ function Widgets.Button(parent, text, width, height)
     label:SetText(text or "")
     b.label = label
     function b:SetText(t) self.label:SetText(t) end
+    function b:GetText() return self.label:GetText() end
     return b
 end
 
@@ -308,4 +310,233 @@ function Widgets.ProgressBar(parent, width, height)
         self.label:SetText(text or "")
     end
     return bar
+end
+
+---------------------------------------------------------------------------
+-- SelectList (v0.4.0): the left page of the book, like the Quest Log list.
+-- Items: { header = "Combat" }  or
+--        { key, text, icon?, right?, dim?, color? }   (color = text colour)
+-- list:SetItems(items, keepSelection); list.selectedKey; onSelect(item)
+---------------------------------------------------------------------------
+function Widgets.SelectList(parent, rowHeight, onSelect)
+    rowHeight = rowHeight or 22
+    local list
+
+    local function CreateRow(host)
+        local row = CreateFrame("Button", nil, host)
+        row.sel = Theme.SolidTexture(row, "BACKGROUND", C.bookSelect)
+        row.sel:SetAllPoints()
+        row.hover = Theme.SolidTexture(row, "BACKGROUND", C.bookHover, 1)
+        row.hover:SetAllPoints()
+        row.hover:Hide()
+        row.icon = row:CreateTexture(nil, "ARTWORK")
+        row.icon:SetSize(rowHeight - 6, rowHeight - 6)
+        row.icon:SetPoint("LEFT", 6, 0)
+        row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        row.text = Theme.Ink(row, 13, C.bookInk)
+        row.text:SetJustifyV("MIDDLE")
+        if row.text.SetWordWrap then row.text:SetWordWrap(false) end
+        row.right = Theme.Ink(row, 11, C.bookMuted)
+        row.right:SetPoint("RIGHT", -6, 0)
+        row.right:SetJustifyH("RIGHT")
+        row.right:SetJustifyV("MIDDLE")
+        row.header = Theme.BookHeading(row, 12)
+        row.header:SetPoint("BOTTOMLEFT", 4, 3)
+        row:SetScript("OnEnter", function(self) if self.item and not self.item.header then self.hover:Show() end end)
+        row:SetScript("OnLeave", function(self) self.hover:Hide() end)
+        row:SetScript("OnClick", function(self)
+            local item = self.item
+            if not item or item.header then return end
+            list.selectedKey = item.key
+            list:Refresh()
+            CoA.Compat.PlaySound("IG_QUEST_LIST_SELECT", 875)
+            if onSelect then onSelect(item) end
+        end)
+        return row
+    end
+
+    local function UpdateRow(row, item)
+        row.item = item
+        local isHeader = item.header ~= nil
+        row.header:SetShown(isHeader)
+        row.text:SetShown(not isHeader)
+        row.right:SetShown(not isHeader)
+        row.sel:SetShown(not isHeader and item.key == list.selectedKey)
+        if isHeader then
+            row.icon:Hide()
+            row.header:SetText(item.header)
+            return
+        end
+        row.text:ClearAllPoints()
+        if item.icon then
+            row.icon:SetTexture(item.icon)
+            row.icon:SetDesaturated(item.dim and true or false)
+            row.icon:Show()
+            row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+        else
+            row.icon:Hide()
+            row.text:SetPoint("LEFT", 10, 0)
+        end
+        row.text:SetPoint("RIGHT", row, "RIGHT", item.right and -54 or -6, 0)
+        row.text:SetText(item.text or "")
+        local c = item.color or (item.dim and C.bookFaint or C.bookInk)
+        row.text:SetTextColor(c[1], c[2], c[3])
+        row.right:SetText(item.right or "")
+    end
+
+    list = Widgets.VirtualList(parent, rowHeight, CreateRow, UpdateRow)
+
+    -- Keeps the selection if its key is still listed, else selects the
+    -- first selectable item. Returns the selected item.
+    function list:SetSelectableItems(items)
+        local selected, first
+        for _, it in ipairs(items) do
+            if not it.header then
+                first = first or it
+                if it.key == self.selectedKey then selected = it end
+            end
+        end
+        selected = selected or first
+        self.selectedKey = selected and selected.key or nil
+        local offset = self.offset
+        self:SetItems(items)
+        -- SetItems scrolls to the top; keep the reader's place on refreshes.
+        self.offset = offset or 0
+        self:Refresh()
+        return selected
+    end
+    return list
+end
+
+---------------------------------------------------------------------------
+-- Document (v0.4.0): the right page of the book. A scrollable column of
+-- titles, rules, headings, paragraphs, bars and "label .... value" lines,
+-- rebuilt on every refresh from pooled regions.
+--   doc:Begin()  doc:Title(t)  doc:Sub(t)  doc:Rule()  doc:Heading(t)
+--   doc:Para(t, color)  doc:Big(t)  doc:Bar(cur, max)  doc:Pairs(list)
+--   doc:Gap(px)  doc:End()
+---------------------------------------------------------------------------
+function Widgets.Document(parent)
+    local area = Widgets.ScrollArea(parent)
+    local content = area.content
+    local doc = { area = area, pools = {}, used = {}, y = 0 }
+
+    local makers = {
+        title = function() return Theme.BookTitle(content, 20) end,
+        big = function() return Theme.Ink(content, 30, C.bookHead, Theme.FONT_BOOK) end,
+        sub = function() return Theme.Ink(content, 13, C.bookMuted) end,
+        heading = function() return Theme.BookHeading(content, 14) end,
+        para = function()
+            local fs = Theme.Ink(content, 13, C.bookInk)
+            if fs.SetSpacing then fs:SetSpacing(3) end
+            return fs
+        end,
+        rule = function() return Theme.InkRule(content) end,
+        bar = function()
+            local b = Widgets.ProgressBar(content, 260, 16)
+            return b
+        end,
+        pairL = function() return Theme.Ink(content, 13, C.bookInk) end,
+        pairR = function()
+            local fs = Theme.Ink(content, 13, C.bookHead)
+            fs:SetJustifyH("RIGHT")
+            return fs
+        end,
+        dots = function()
+            local f = C.bookFaint
+            local t = Theme.SolidTexture(content, "ARTWORK", { f[1], f[2], f[3], 0.35 })
+            t:SetHeight(1)
+            return t
+        end,
+    }
+
+    local function Take(kind)
+        doc.pools[kind] = doc.pools[kind] or {}
+        doc.used[kind] = (doc.used[kind] or 0) + 1
+        local r = doc.pools[kind][doc.used[kind]]
+        if not r then
+            r = makers[kind]()
+            doc.pools[kind][doc.used[kind]] = r
+        end
+        r:ClearAllPoints()
+        r:Show()
+        return r
+    end
+
+    local function Width()
+        local w = content:GetWidth() or 0
+        if w < 50 then w = (area:GetWidth() or 300) - 14 end
+        return math.max(80, w - 4)
+    end
+
+    local function Text(kind, text, color, gapBefore)
+        doc.y = doc.y + (gapBefore or 0)
+        local fs = Take(kind)
+        fs:SetWidth(Width())
+        fs:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -doc.y)
+        fs:SetText(text or "")
+        if color then fs:SetTextColor(color[1], color[2], color[3]) end
+        doc.y = doc.y + (fs:GetStringHeight() or 14)
+        return fs
+    end
+
+    function doc:Begin()
+        for kind, pool in pairs(self.pools) do
+            for _, r in ipairs(pool) do r:Hide() end
+            self.used[kind] = 0
+        end
+        self.y = 2
+    end
+    function doc:Title(t, color) return Text("title", t, color or C.bookHead, 0) end
+    function doc:Big(t) return Text("big", t, C.bookHead, 4) end
+    function doc:Sub(t) return Text("sub", t, C.bookMuted, 4) end
+    function doc:Heading(t) return Text("heading", t, C.bookHead, 16) end
+    function doc:Para(t, color) return Text("para", t, color or C.bookInk, 8) end
+    function doc:Gap(px) self.y = self.y + (px or 8) end
+    function doc:Rule()
+        self.y = self.y + 6
+        local r = Take("rule")
+        r:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -self.y)
+        r:SetWidth(Width())
+        self.y = self.y + 4
+    end
+    function doc:Bar(cur, max, label)
+        self.y = self.y + 8
+        local b = Take("bar")
+        b:SetWidth(math.min(300, Width()))
+        b:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -self.y)
+        b:SetProgress(cur, max, label or (Util.FormatNumber(cur) .. " / " .. Util.FormatNumber(max)))
+        self.y = self.y + 18
+    end
+    -- Two columns of "label ..... value" lines when there is room.
+    function doc:Pairs(list)
+        local width = Width()
+        local cols = width > 420 and 2 or 1
+        local colW = (width - (cols - 1) * 20) / cols
+        local rowH = 24
+        local top = self.y + 6
+        for i, p in ipairs(list) do
+            local col = (i - 1) % cols
+            local row = math.floor((i - 1) / cols)
+            local x, y = 2 + col * (colW + 20), top + row * rowH
+            local l = Take("pairL")
+            l:SetWidth(colW - 70)
+            l:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + 4))
+            l:SetText(p[1])
+            if l.SetWordWrap then l:SetWordWrap(false) end
+            local r = Take("pairR")
+            r:SetWidth(70)
+            r:SetPoint("TOPRIGHT", content, "TOPLEFT", x + colW, -(y + 4))
+            r:SetText(p[2])
+            local d = Take("dots")
+            d:SetWidth(colW)
+            d:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + rowH - 2))
+        end
+        self.y = top + math.ceil(#list / cols) * rowH
+    end
+    function doc:End(scrollTop)
+        area:SetContentHeight(self.y + 12)
+        if scrollTop then area:ScrollToTop() end
+    end
+    return doc
 end

@@ -1,10 +1,11 @@
 --[[
   Chronicles of Azeroth - UI/Theme.lua
 
-  Visual language (v0.3.0, "native" redesign): the addon now dresses like
-  Blizzard's own windows - the standard portrait frame, bottom tabs, red
-  panel buttons, Friz Quadrata in Blizzard gold and white, tooltip-style
-  insets and a parchment page for the journal.
+  Visual language (v0.4.0, "Quest Log book"): the window is Blizzard's
+  portrait frame with bottom tabs, and every chapter is an open book of two
+  parchment pages - a list on the left page, the details of the selected
+  entry on the right - written in dark ink, like the Quest Log. Buttons are
+  Blizzard's red panel buttons, in a footer under the book.
 
   Blizzard templates and art are used where the Mainline client has them
   (ButtonFrameTemplate, PanelTabButtonTemplate, UIPanelButtonTemplate,
@@ -45,6 +46,15 @@ Theme.C = {
     paperInk     = { 0.24, 0.16, 0.07, 1 },
     paperHead    = { 0.38, 0.22, 0.05, 1 },
     paperFaint   = { 0.45, 0.36, 0.24, 1 },
+    -- Book (v0.4.0): ink on the parchment pages
+    bookInk      = { 0.17, 0.10, 0.03, 1 },
+    bookHead     = { 0.23, 0.12, 0.02, 1 },
+    bookMuted    = { 0.35, 0.24, 0.09, 1 },
+    bookFaint    = { 0.50, 0.40, 0.24, 1 },
+    bookGreen    = { 0.10, 0.36, 0.06, 1 },
+    bookRed      = { 0.55, 0.06, 0.03, 1 },
+    bookSelect   = { 1.00, 0.86, 0.45, 0.85 },
+    bookHover    = { 1.00, 0.95, 0.75, 0.45 },
 }
 
 -- Category accent colours for feed entries.
@@ -257,4 +267,53 @@ function Theme.Icon(parent, size, texture)
     holder.icon = icon
     holder.edges = Theme.Border(holder, { 0.35, 0.35, 0.35, 1 }, 0, "OVERLAY")
     return holder
+end
+
+---------------------------------------------------------------------------
+-- Book (v0.4.0)
+---------------------------------------------------------------------------
+-- Ink on parchment: no drop shadow.
+function Theme.Ink(parent, size, color, font, layer)
+    local fs = Theme.Text(parent, size or 13, color or Theme.C.bookInk, font, layer)
+    fs:SetShadowOffset(0, 0)
+    fs:SetShadowColor(0, 0, 0, 0)
+    return fs
+end
+
+-- Page title (Morpheus, like quest titles) and section heading (Friz).
+function Theme.BookTitle(parent, size)
+    return Theme.Ink(parent, size or 20, Theme.C.bookHead, Theme.FONT_BOOK)
+end
+
+function Theme.BookHeading(parent, size)
+    return Theme.Ink(parent, size or 14, Theme.C.bookHead, Theme.FONT_HEADING)
+end
+
+-- A parchment page: Blizzard's quest parchment where the client has it,
+-- a paper colour otherwise; `side` darkens the edge at the book's spine.
+function Theme.Parchment(frame, side)
+    local sheet = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
+    sheet:SetAllPoints()
+    if not Theme.AtlasOrColor(sheet, "QuestBG-Parchment", Theme.C.paper) then
+        -- Flat fallback: a soft light patch so the page does not look dead.
+        local glow = Theme.GradientTexture(frame, "BACKGROUND", { 1, 0.98, 0.9, 0.35 }, { 1, 0.98, 0.9, 0 }, -5)
+        glow:SetPoint("TOPLEFT"); glow:SetPoint("TOPRIGHT"); glow:SetHeight(140)
+    end
+    if side then
+        local shade = side == "left"
+            and Theme.HGradientTexture(frame, "BACKGROUND", { 0.3, 0.18, 0.05, 0 }, { 0.3, 0.18, 0.05, 0.45 }, -4)
+            or Theme.HGradientTexture(frame, "BACKGROUND", { 0.3, 0.18, 0.05, 0.45 }, { 0.3, 0.18, 0.05, 0 }, -4)
+        shade:SetWidth(18)
+        shade:SetPoint("TOP"); shade:SetPoint("BOTTOM")
+        shade:SetPoint(side == "left" and "RIGHT" or "LEFT")
+    end
+    return sheet
+end
+
+-- Thin ink rule under a title.
+function Theme.InkRule(parent)
+    local f = Theme.C.bookFaint
+    local t = Theme.HGradientTexture(parent, "ARTWORK", { f[1], f[2], f[3], 0.9 }, { f[1], f[2], f[3], 0 })
+    t:SetHeight(1)
+    return t
 end

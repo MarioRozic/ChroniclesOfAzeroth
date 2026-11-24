@@ -104,19 +104,47 @@ check(saved.active.herd and saved.completed.herd and saved.failed.survivor == 1,
 CoA.UI:Show("challenges")
 local page = CoA.UI.frame.pageFrames.challenges
 check(page and page.summary:GetText():find("under way"), "Challenges page: " .. tostring(page and page.summary:GetText()))
-local okRender = pcall(function()
-  for _, f in ipairs({ "all", "active", "combat", "social" }) do page.filter = f; page:Render() end
-end)
-check(okRender, "all filters render")
--- click Accept / Abandon through the row button
-local row = page.list.rows[1]
-page.filter = "active"; page:Render()
-row = page.list.rows[1]
+local okRender = pcall(function() page:Render(); page:Render() end)
+check(okRender, "challenges page renders twice")
+-- the first item is an active challenge; the footer offers Abandon
+local footer = CoA.UI.frame.footer[1]
+check(page.selected and page.selected.state and footer:GetText() == "Abandon Challenge",
+  "first selection is under way, footer says " .. tostring(footer:GetText()))
 local before = Ch:CountActive()
-row.button._scripts.OnClick(row.button)
-check(Ch:CountActive() == before - 1, "row button abandons an active challenge")
+footer._scripts.OnClick(footer)
+check(Ch:CountActive() == before - 1, "footer button abandons the selected challenge")
+-- select a challenge that is not under way, then accept it from the footer
+local target
+for _, it in ipairs(page.list.items) do if it.def and not it.state and it.canAccept then target = it break end end
+page.list.selectedKey = target.key; page:Render()
+check(footer:GetText() == "Accept", "footer offers Accept for " .. target.def.name)
+footer._scripts.OnClick(footer)
+check(Ch:IsActive(target.def.id), "footer accepts the selected challenge")
+-- journal, milestones and exploration select entries and fill the right page
+for _, k in ipairs({ "journal", "achievements", "exploration", "history" }) do
+  CoA.UI:Show(k)
+  local pg = CoA.UI.frame.pageFrames[k]
+  local list = pg.list.selectedKey ~= nil or k == "history"
+  check(list, k .. " has a selection")
+end
+local ex = CoA.UI.frame.pageFrames.exploration
+for _, v in ipairs({ "dungeons", "rares", "regions" }) do
+  ex.view = v
+  local okv, ev = pcall(ex.Render, ex)
+  check(okv, "exploration view " .. v .. (okv and "" or tostring(ev)))
+end
+local hist = CoA.UI.frame.pageFrames.history
+hist.category = "combat"; hist:Render()
+check(#hist.list.items > 0 and hist.listTitle:GetText() == "Battles", "history filters by category: " .. hist.listTitle:GetText())
 CoA.UI:Show("overview")
-check(CoA.UI.frame.pageFrames.overview.tiles[15].value:GetText():find("/ 5"), "overview tile shows challenges")
+local ov = CoA.UI.frame.pageFrames.overview
+local found = false
+for _, fs in ipairs(ov.right.pools.pairR or {}) do if fs:IsShown() and fs:GetText():find("/ 5") then found = true end end
+check(found, "character page shows challenges under way")
+-- the footer Close button closes the window
+CoA.UI.frame.footerClose._scripts.OnClick(CoA.UI.frame.footerClose)
+check(not CoA.UI.frame:IsShown(), "footer Close button closes the window")
+CoA.UI:Show("overview")
 -- X button closes (native mode has a template CloseButton)
 if CoA.UI.frame.CloseButton then
   CoA.UI.frame.CloseButton._scripts.OnClick(CoA.UI.frame.CloseButton)

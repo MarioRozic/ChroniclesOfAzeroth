@@ -4,7 +4,7 @@ An RPG companion for **World of Warcraft: Forever**: a travel journal, a charact
 profile and a chronicle of everything you really did on your journey. It never
 plays the game for you and never invents events.
 
-Version 0.3.0 (Phase 3: challenges, notifications and a Blizzard-native redesign).
+Version 0.4.0 (Phase 3 plus the Quest Log book redesign).
 
 ## Client compatibility
 
@@ -41,8 +41,10 @@ Version 0.3.0 (Phase 3: challenges, notifications and a Blizzard-native redesign
   kill sources are active, and any event the client refused to register.
 - `/coa reset confirm` erases this character's chronicle.
 
-The window uses Blizzard's own frame (portrait, title bar, close button, inset),
-bottom tabs, red panel buttons and search box. Drag the frame to move it, drag the
+The window is laid out like Blizzard's Quest Log: an open book of two parchment
+pages, with a list on the left page and the chosen entry on the right, red buttons
+under the book (Accept, Abandon Challenge, Change Title, Close) and the chapters as
+tabs along the bottom. Drag the frame to move it, drag the
 bottom-right grip to resize it, and close it with the X or Escape.
 
 ## Challenges

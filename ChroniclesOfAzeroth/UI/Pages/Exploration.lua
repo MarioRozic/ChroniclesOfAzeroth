@@ -1,7 +1,8 @@
 --[[
-  Chronicles of Azeroth - UI/Pages/Exploration.lua  (Phase 2)
+  Chronicles of Azeroth - UI/Pages/Exploration.lua
 
-  The Exploration chapter, an atlas of where you have been:
+  The Exploration chapter as a book, an atlas of where you have been. The
+  left page lists one of three views, the right page shows the chosen entry:
     Regions          - every region by continent, with first visit, visits,
                        named places walked, quests, kills and deaths
     Dungeons         - instances entered, bosses defeated, completions
@@ -15,58 +16,8 @@ local _, CoA = ...
 local Theme, Widgets, Util = CoA.Theme, CoA.Widgets, CoA.Util
 local C = Theme.C
 
-local ROW_H = 46
-
 local function Plural(n, word)
     return n .. " " .. word .. (n == 1 and "" or "s")
-end
-
-local function CreateRow(parent)
-    local row = CreateFrame("Frame", nil, parent)
-    local bg = Theme.SolidTexture(row, "BACKGROUND", { 1, 1, 1, 0.025 })
-    bg:SetPoint("TOPLEFT", 0, -2); bg:SetPoint("BOTTOMRIGHT", 0, 2)
-    row.bg = bg
-    row.icon = Theme.Icon(row, 30)
-    row.icon:SetPoint("LEFT", 10, 0)
-    row.name = Theme.Heading(row, 15)
-    row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 12, -1)
-    row.name:SetPoint("RIGHT", row, "RIGHT", -230, 0)
-    if row.name.SetWordWrap then row.name:SetWordWrap(false) end
-    row.detail = Theme.Text(row, 11, C.inkFaint)
-    row.detail:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -4)
-    row.detail:SetPoint("RIGHT", row, "RIGHT", -230, 0)
-    if row.detail.SetWordWrap then row.detail:SetWordWrap(false) end
-    row.right = Theme.Text(row, 11, C.inkMuted)
-    row.right:SetPoint("RIGHT", -12, 0)
-    row.right:SetJustifyH("RIGHT")
-    row.right:SetJustifyV("MIDDLE")
-    if row.right.SetSpacing then row.right:SetSpacing(3) end
-    row.header = Theme.Heading(row, 17)
-    row.header:SetPoint("BOTTOMLEFT", 4, 8)
-    row.rule = Theme.HGradientTexture(row, "ARTWORK", C.goldFaint, { 0, 0, 0, 0 })
-    row.rule:SetHeight(1)
-    row.rule:SetPoint("BOTTOMLEFT", 4, 4)
-    row.rule:SetPoint("BOTTOMRIGHT", 0, 4)
-    return row
-end
-
-local function UpdateRow(row, item, index)
-    local isHeader = item.header ~= nil
-    row.header:SetShown(isHeader); row.rule:SetShown(isHeader)
-    row.icon:SetShown(not isHeader); row.name:SetShown(not isHeader)
-    row.detail:SetShown(not isHeader); row.right:SetShown(not isHeader)
-    row.bg:SetShown(not isHeader and index % 2 == 0)
-    if isHeader then
-        row.header:SetText(item.header)
-        return
-    end
-    row.icon.icon:SetTexture(item.icon)
-    row.icon.icon:SetDesaturated(item.dim and true or false)
-    row.name:SetText(item.name)
-    local c = item.dim and C.inkMuted or C.gold
-    row.name:SetTextColor(c[1], c[2], c[3])
-    row.detail:SetText(item.detail)
-    row.right:SetText(item.right)
 end
 
 ---------------------------------------------------------------------------
@@ -85,8 +36,20 @@ local function RegionItems(char)
                 "   \194\183   " .. Plural(subs, "named place")
             if z.revealed then detail = detail .. "   \194\183   " .. Plural(z.revealed, "map area") .. " revealed" end
             local list = byContinent[cont]
+            local places = {}
+            for sub in pairs(z.subzones or {}) do places[#places + 1] = sub end
+            table.sort(places)
             list[#list + 1] = { name = name, first = z.firstVisit or 0, icon = "Interface\\Icons\\INV_Misc_Map_01",
-                                detail = detail, right = right }
+                                detail = detail, right = right, sub = cont,
+                                pairs = {
+                                    { "First visit", Util.FormatLongDate(z.firstVisit or 0) },
+                                    { "Visits", Util.FormatNumber(z.visits or 0) },
+                                    { "Quests", Util.FormatNumber(z.quests or 0) },
+                                    { "Enemies defeated", Util.FormatNumber(z.kills or 0) },
+                                    { "Deaths", Util.FormatNumber(z.deaths or 0) },
+                                    { "Map areas revealed", z.revealed and Util.FormatNumber(z.revealed) or "-" },
+                                },
+                                listTitle = "Named places walked", list = places }
         end
     end
     table.sort(order)
@@ -123,7 +86,15 @@ local function DungeonItems(char)
             end
             items[#items + 1] = { name = name, first = z.firstVisit or 0, detail = detail, right = right,
                 icon = d and "Interface\\Icons\\INV_Misc_Key_03" or "Interface\\Icons\\Spell_Arcane_PortalOrgrimmar",
-                dim = not d }
+                dim = not d, sub = "Dungeon",
+                pairs = {
+                    { "First entered", Util.FormatLongDate(z.firstVisit or 0) },
+                    { "Visits", Util.FormatNumber(z.visits or 0) },
+                    { "Completions", d and Util.FormatNumber(d.completions) or "0" },
+                    { "Flawless runs", d and Util.FormatNumber(d.deathless or 0) or "0" },
+                    { "Fastest run", d and d.fastest and Util.FormatDuration(d.fastest) or "-" },
+                },
+                listTitle = "Bosses defeated", list = bosses }
         end
     end
     table.sort(items, function(a, b) return a.first > b.first end)
@@ -138,6 +109,13 @@ local function RareItems(char)
             (r.level and ("   \194\183   level " .. r.level) or "")
         local slain = (r.kills or 0) > 0
         items[#items + 1] = {
+            sub = r.elite and "Rare elite" or "Rare creature",
+            pairs = {
+                { "First spotted", Util.FormatLongDate(r.firstSeen or 0) },
+                { "Where", (r.zone and r.zone ~= "") and r.zone or "-" },
+                { "Level", r.level and tostring(r.level) or "-" },
+                { "Times slain", Util.FormatNumber(r.kills or 0) },
+            },
             name = name .. (r.elite and "  (elite)" or ""), first = r.firstSeen or 0, detail = detail,
             right = slain and ("Slain " .. Plural(r.kills, "time")) or "Still roaming",
             icon = slain and "Interface\\Icons\\Ability_Hunter_SniperShot" or "Interface\\Icons\\INV_Misc_Head_Dragon_01",
@@ -163,62 +141,47 @@ local VIEWS = {
 local function Create(parent)
     local page = CreateFrame("Frame", nil, parent)
     page.view = "regions"
+    local L, R = CoA.UI:PageAreas(page)
 
-    -- Summary line of four figures
-    page.figures = {}
-    for i = 1, 4 do
-        local f = CreateFrame("Frame", nil, page)
-        f:SetSize(130, 40)
-        f.value = Theme.Heading(f, 22)
-        f.value:SetPoint("TOPLEFT", 0, 0)
-        f.label = Theme.Text(f, 10, C.inkMuted)
-        f.label:SetPoint("TOPLEFT", f.value, "BOTTOMLEFT", 0, -2)
-        page.figures[i] = f
-    end
+    page.heading = Theme.BookTitle(L, 20)
+    page.heading:SetPoint("TOPLEFT", 2, 0)
+    page.heading:SetText("Exploration")
+    page.summary = Theme.Ink(L, 12, C.bookMuted)
+    page.summary:SetPoint("TOPLEFT", page.heading, "BOTTOMLEFT", 0, -4)
+    page.summary:SetPoint("RIGHT", L, "RIGHT", -4, 0)
 
     page.chips = {}
     local prev
     for _, v in ipairs(VIEWS) do
-        local chip = Widgets.Chip(page, v.label)
-        if prev then chip:SetPoint("LEFT", prev, "RIGHT", 6, 0) else chip:SetPoint("TOPLEFT", 0, -50) end
+        local chip = Widgets.Chip(L, v.label)
+        if prev then chip:SetPoint("LEFT", prev, "RIGHT", 4, 0) else chip:SetPoint("TOPLEFT", 0, -60) end
         chip.key = v.key
         chip:SetScript("OnClick", function() page.view = v.key; page:Render() end)
         page.chips[#page.chips + 1] = chip
         prev = chip
     end
 
-    page.list = Widgets.VirtualList(page, ROW_H, CreateRow, UpdateRow)
-    page.list:SetPoint("TOPLEFT", 0, -82)
+    page.list = Widgets.SelectList(L, 24, function() page:Render() end)
+    page.list:SetPoint("TOPLEFT", 0, -88)
     page.list:SetPoint("BOTTOMRIGHT", 0, 0)
-    page.empty = Theme.Text(page, 13, C.inkFaint)
-    page.empty:SetPoint("TOPLEFT", page.list, "TOPLEFT", 4, -10)
-    page.empty:SetWidth(480)
+
+    page.doc = Widgets.Document(R)
+    page.doc.area:SetAllPoints()
+    page.doc.area.OnWidthChanged = function() if page:IsShown() then page:Render() end end
 
     function page:Render()
         local char = CoA.char
         local s = char.stats
-        local regions, instances = 0, 0
-        local continents = {}
+        local regions, continents = 0, {}
         for _, z in pairs(char.exploration.zones) do
-            if z.isInstance then instances = instances + 1 else
+            if not z.isInstance then
                 regions = regions + 1
                 if z.continent then continents[z.continent] = true end
             end
         end
-        local fig = {
-            { regions, "regions explored" },
-            { Util.CountKeys(continents), "continents" },
-            { s.areasDiscovered, "hidden places uncovered" },
-            { s.subzonesDiscovered, "named places walked" },
-        }
-        local width = self:GetWidth() or 600
-        local colW = math.max(110, (width - 14) / 4)
-        for i, f in ipairs(self.figures) do
-            f:ClearAllPoints()
-            f:SetPoint("TOPLEFT", (i - 1) * colW, 0)
-            f.value:SetText(Util.FormatNumber(fig[i][1]))
-            f.label:SetText(fig[i][2])
-        end
+        self.summary:SetText(string.format("%s  \194\183  %s\n%s  \194\183  %s",
+            Plural(regions, "region"), Plural(Util.CountKeys(continents), "continent"),
+            Plural(s.areasDiscovered, "hidden place"), Plural(s.subzonesDiscovered, "named place")))
 
         local view
         for _, v in ipairs(VIEWS) do
@@ -226,15 +189,43 @@ local function Create(parent)
         end
         for _, chip in ipairs(self.chips) do chip:SetSelected(chip.key == self.view) end
         local items = view.build(char)
-        self.list:SetItems(items)
-        self.empty:SetShown(#items == 0)
-        self.empty:SetText(view.empty)
+        for _, it in ipairs(items) do
+            if not it.header then
+                it.key = self.view .. ":" .. it.name
+                it.text = it.name
+                it.right = nil
+            end
+        end
+        local sel = self.list:SetSelectableItems(items)
+
+        local d = self.doc
+        d:Begin()
+        if not sel then
+            d:Title(view.label)
+            d:Rule()
+            d:Para(view.empty, C.bookMuted)
+        else
+            d:Title(sel.name)
+            if sel.sub then d:Sub(sel.sub) end
+            d:Rule()
+            d:Pairs(sel.pairs or {})
+            if sel.listTitle then
+                d:Heading(sel.listTitle)
+                if sel.list and #sel.list > 0 then
+                    d:Para(table.concat(sel.list, ", ") .. ".")
+                else
+                    d:Para("None recorded yet.", C.bookMuted)
+                end
+            end
+        end
+        d:End(self.lastKey ~= (sel and sel.key))
+        self.lastKey = sel and sel.key
     end
     return page
 end
 
 CoA.UI:RegisterPage("exploration", {
-    label = "Exploration", icon = "Interface\\Icons\\INV_Misc_Map_01", order = 5,
+    label = "Exploration", order = 5,
     create = Create,
     refresh = function(page) page:Render() end,
 })

@@ -1,172 +1,140 @@
 --[[
-  Chronicles of Azeroth - UI/Pages/Achievements.lua  (Phase 2)
+  Chronicles of Azeroth - UI/Pages/Achievements.lua
 
-  The Milestones chapter: overall progress, the title you wear, category
-  filters, and every milestone with its progress or its unlock date.
-  Order: earned (newest first), then closest to completion, then unavailable.
+  The Milestones chapter as a book: the left page lists every milestone by
+  category (earned ones marked), the right page shows the chosen one with
+  its progress or the day it was earned. "Change title" sits in the footer.
 ]]
 
 local _, CoA = ...
 local Theme, Widgets, Util = CoA.Theme, CoA.Widgets, CoA.Util
 local C = Theme.C
 
-local ROW_H = 62
-
-local function CreateRow(parent)
-    local row = CreateFrame("Frame", nil, parent)
-    local bg = Theme.SolidTexture(row, "BACKGROUND", { 1, 1, 1, 0.025 })
-    bg:SetPoint("TOPLEFT", 0, -3); bg:SetPoint("BOTTOMRIGHT", 0, 3)
-    row.bg = bg
-    row.accent = Theme.SolidTexture(row, "ARTWORK", C.gold)
-    row.accent:SetPoint("TOPLEFT", 0, -3); row.accent:SetPoint("BOTTOMLEFT", 0, 3); row.accent:SetWidth(2)
-
-    row.icon = Theme.Icon(row, 42)
-    row.icon:SetPoint("LEFT", 12, 0)
-    row.name = Theme.Heading(row, 14)
-    row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 12, -2)
-    row.name:SetPoint("RIGHT", row, "RIGHT", -190, 0)
-    if row.name.SetWordWrap then row.name:SetWordWrap(false) end
-    row.desc = Theme.Text(row, 12, C.ink)
-    row.desc:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -3)
-    row.desc:SetPoint("RIGHT", row, "RIGHT", -190, 0)
-    if row.desc.SetWordWrap then row.desc:SetWordWrap(false) end
-    row.reward = Theme.Text(row, 10, C.goldDim)
-    row.reward:SetPoint("TOPLEFT", row.desc, "BOTTOMLEFT", 0, -3)
-
-    row.bar = Widgets.ProgressBar(row, 170, 14)
-    row.bar:SetPoint("RIGHT", row, "RIGHT", -12, 0)
-    row.date = Theme.Text(row, 12, C.gold, Theme.FONT_HEADING)
-    row.date:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -14)
-    row.date:SetJustifyH("RIGHT")
-    row.where = Theme.Text(row, 10, C.inkFaint)
-    row.where:SetPoint("TOPRIGHT", row.date, "BOTTOMRIGHT", 0, -3)
-    row.where:SetJustifyH("RIGHT")
-    return row
+local function CategoryLabel(key)
+    for _, c in ipairs(CoA.AchievementData.CATEGORIES) do
+        if c.key == key then return c.label end
+    end
+    return key
 end
 
-local function UpdateRow(row, item, index)
+local function CycleTitle()
+    -- Level title -> each earned title -> level title.
     local A = CoA.Achievements
-    local def, unlocked = item.def, item.unlocked
-    row.bg:SetShown(index % 2 == 0)
-    row.icon.icon:SetTexture(def.icon)
-    row.icon.icon:SetDesaturated(not unlocked)
-    Theme.SetBorderColor(row.icon.edges, unlocked and C.gold or C.goldFaint)
-    row.accent:SetShown(unlocked and true or false)
-    row.name:SetText(def.name)
-    local nc = unlocked and C.gold or C.inkMuted
-    row.name:SetTextColor(nc[1], nc[2], nc[3])
-    row.desc:SetText(def.desc)
-    local dc = unlocked and C.ink or C.inkFaint
-    row.desc:SetTextColor(dc[1], dc[2], dc[3])
-    row.reward:SetText(def.title and ("Title reward: " .. def.title) or "")
-
-    if unlocked then
-        row.bar:Hide()
-        row.date:Show(); row.where:Show()
-        row.date:SetText("Earned " .. Util.FormatLongDate(unlocked.t))
-        local where = unlocked.level and ("Level " .. unlocked.level) or ""
-        if unlocked.zone then where = where .. (where ~= "" and "  \194\183  " or "") .. unlocked.zone end
-        row.where:SetText(where)
-    elseif not item.available then
-        row.bar:Hide()
-        row.date:Show(); row.where:Hide()
-        row.date:SetText("Unavailable")
-        row.date:SetTextColor(C.inkFaint[1], C.inkFaint[2], C.inkFaint[3])
-        return
-    else
-        row.date:Hide(); row.where:Hide()
-        row.bar:Show()
-        row.bar:SetProgress(item.current, def.target,
-            Util.FormatNumber(item.current) .. " / " .. Util.FormatNumber(def.target))
+    local titles = A:GetEarnedTitles()
+    local current = CoA.char.profile.customTitle
+    local nextTitle = titles[1]
+    for i, t in ipairs(titles) do
+        if t == current then nextTitle = titles[i + 1] end
     end
-    row.date:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
-    if not A then return end
+    A:WearTitle(nextTitle)
+    CoA.UI:RefreshHeader()
+    CoA.UI:RefreshCurrent()
 end
 
 local function Create(parent)
     local page = CreateFrame("Frame", nil, parent)
-    page.category = "all"
+    local L, R = CoA.UI:PageAreas(page)
 
-    page.summary = Theme.Heading(page, 16)
-    page.summary:SetPoint("TOPLEFT", 2, 0)
-    page.total = Widgets.ProgressBar(page, 240, 14)
-    page.total:SetPoint("TOPLEFT", page.summary, "BOTTOMLEFT", 0, -8)
+    page.heading = Theme.BookTitle(L, 20)
+    page.heading:SetPoint("TOPLEFT", 2, 0)
+    page.heading:SetText("Milestones")
+    page.summary = Theme.Ink(L, 12, C.bookMuted)
+    page.summary:SetPoint("TOPLEFT", page.heading, "BOTTOMLEFT", 0, -4)
+    page.total = Widgets.ProgressBar(L, 200, 14)
+    page.total:SetPoint("TOPLEFT", page.summary, "BOTTOMLEFT", 0, -6)
 
-    page.titleLabel = Theme.Text(page, 12, C.inkMuted)
-    page.titleLabel:SetPoint("TOPRIGHT", -112, -2)
-    page.titleLabel:SetJustifyH("RIGHT")
-    page.titleButton = Widgets.Button(page, "Change title", 96, 22)
-    page.titleButton:SetPoint("TOPRIGHT", -14, 0)
-    page.titleButton:SetScript("OnClick", function()
-        -- Cycles: level title -> each earned title -> level title.
-        local A = CoA.Achievements
-        local titles = A:GetEarnedTitles()
-        local current = CoA.char.profile.customTitle
-        local nextTitle = titles[1]
-        for i, t in ipairs(titles) do
-            if t == current then nextTitle = titles[i + 1] end
-        end
-        A:WearTitle(nextTitle)
-        page:Render()
-    end)
-
-    page.chips = {}
-    local prev
-    local cats = { { key = "all", label = "All" } }
-    for _, c in ipairs(CoA.AchievementData.CATEGORIES) do cats[#cats + 1] = c end
-    for _, cat in ipairs(cats) do
-        local chip = Widgets.Chip(page, cat.label)
-        if prev then chip:SetPoint("LEFT", prev, "RIGHT", 5, 0) else chip:SetPoint("TOPLEFT", 0, -50) end
-        chip.key = cat.key
-        chip:SetScript("OnClick", function() page.category = cat.key; page:Render() end)
-        page.chips[#page.chips + 1] = chip
-        prev = chip
-    end
-
-    page.list = Widgets.VirtualList(page, ROW_H, CreateRow, UpdateRow)
-    page.list:SetPoint("TOPLEFT", 0, -82)
+    page.list = Widgets.SelectList(L, 24, function() page:Render() end)
+    page.list:SetPoint("TOPLEFT", 0, -72)
     page.list:SetPoint("BOTTOMRIGHT", 0, 0)
+
+    page.doc = Widgets.Document(R)
+    page.doc.area:SetAllPoints()
+    page.doc.area.OnWidthChanged = function() if page:IsShown() then page:Render() end end
+    page.titleButton = { GetScript = function() return CycleTitle end }  -- used by tests
 
     function page:Render()
         local A = CoA.Achievements
-        for _, chip in ipairs(self.chips) do chip:SetSelected(chip.key == self.category) end
-
         local earned, total = A:CountUnlocked()
-        self.summary:SetText(string.format("%d of %d milestones earned", earned, total))
+        self.summary:SetText(string.format("%d of %d earned", earned, total))
         self.total:SetProgress(earned, total, earned .. " / " .. total)
 
-        local titles = A:GetEarnedTitles()
-        self.titleButton:SetShown(#titles > 0)
-        self.titleLabel:SetText(#titles > 0
-            and ("Wearing: " .. Theme.Hex(C.gold) .. CoA.Character:GetTitle() .. "|r")
-            or "Earn a milestone with a title reward to wear it.")
-        self.titleLabel:ClearAllPoints()
-        self.titleLabel:SetPoint("TOPRIGHT", #titles > 0 and -118 or -14, -4)
-
+        -- Left page: by category; earned first within a category.
         local items = {}
-        for _, def in ipairs(CoA.AchievementData.LIST) do
-            if self.category == "all" or def.category == self.category then
-                local unlocked = A:IsUnlocked(def.id)
-                local available = A:IsAvailable(def)
-                local current = (not unlocked and available) and A:GetProgress(def) or 0
-                items[#items + 1] = { def = def, unlocked = unlocked, available = available, current = current }
+        for _, cat in ipairs(CoA.AchievementData.CATEGORIES) do
+            local group = {}
+            for _, def in ipairs(CoA.AchievementData.LIST) do
+                if def.category == cat.key then
+                    local unlocked = A:IsUnlocked(def.id)
+                    local available = A:IsAvailable(def)
+                    local current = (not unlocked and available) and A:GetProgress(def) or 0
+                    group[#group + 1] = {
+                        key = def.id, def = def, unlocked = unlocked, available = available, current = current,
+                        icon = def.icon, text = def.name, dim = not unlocked,
+                        right = unlocked and (Theme.Hex(C.bookGreen) .. "Earned|r")
+                            or (available and (math.min(current, def.target) .. "/" .. def.target) or "-"),
+                    }
+                end
+            end
+            table.sort(group, function(a, b)
+                if (a.unlocked ~= nil) ~= (b.unlocked ~= nil) then return a.unlocked ~= nil end
+                if a.available ~= b.available then return a.available end
+                local fa, fb = a.current / a.def.target, b.current / b.def.target
+                if fa ~= fb then return fa > fb end
+                return a.def.name < b.def.name
+            end)
+            if #group > 0 then
+                items[#items + 1] = { header = cat.label }
+                for _, it in ipairs(group) do items[#items + 1] = it end
             end
         end
-        table.sort(items, function(a, b)
-            if (a.unlocked ~= nil) ~= (b.unlocked ~= nil) then return a.unlocked ~= nil end
-            if a.unlocked and b.unlocked then return a.unlocked.t > b.unlocked.t end
-            if a.available ~= b.available then return a.available end
-            local fa, fb = a.current / a.def.target, b.current / b.def.target
-            if fa ~= fb then return fa > fb end
-            return a.def.name < b.def.name
-        end)
-        self.list:SetItems(items)
+        local sel = self.list:SetSelectableItems(items)
+
+        -- Right page: the chosen milestone.
+        local d = self.doc
+        d:Begin()
+        if sel then
+            local def = sel.def
+            d:Title(def.name)
+            d:Sub(CategoryLabel(def.category))
+            d:Rule()
+            d:Para(def.desc)
+            if sel.unlocked then
+                d:Heading("Earned")
+                d:Para(Util.FormatLongDate(sel.unlocked.t), C.bookGreen)
+                local where = sel.unlocked.level and ("At level " .. sel.unlocked.level) or ""
+                if sel.unlocked.zone then where = where .. (where ~= "" and ", in " or "In ") .. sel.unlocked.zone end
+                if where ~= "" then d:Para(where .. ".") end
+            elseif not sel.available then
+                d:Heading("Unavailable")
+                d:Para("This chronicle began part-way through your journey, so this milestone cannot be judged fairly.", C.bookMuted)
+            else
+                d:Heading("Progress")
+                d:Bar(sel.current, def.target)
+            end
+            if def.title then
+                d:Heading("Reward")
+                d:Para("Title: " .. def.title)
+            end
+        end
+        d:Heading("Your title")
+        d:Para(CoA.Character:GetTitle())
+        local titles = A:GetEarnedTitles()
+        if #titles == 0 then
+            d:Para("Earn a milestone with a title reward to wear it.", C.bookMuted)
+        end
+        d:End(self.lastKey ~= (sel and sel.key))
+        self.lastKey = sel and sel.key
+
+        CoA.UI:SetFooter({
+            { text = "Change Title", onClick = CycleTitle, disabled = #titles == 0,
+              tooltip = #titles == 0 and "Earn a milestone with a title reward first." or "Wear the next title you have earned." },
+        })
     end
     return page
 end
 
 CoA.UI:RegisterPage("achievements", {
-    label = "Milestones", icon = "Interface\\Icons\\Spell_Holy_ChampionsBond", order = 3,
+    label = "Milestones", order = 3,
     create = Create,
     refresh = function(page) page:Render() end,
 })

@@ -1,11 +1,13 @@
 --[[
   Chronicles of Azeroth - UI/MainFrame.lua
 
-  The main window, built like Blizzard's own panels (v0.3.0 redesign):
-    * ButtonFrameTemplate: stone frame, round player portrait, title bar,
-      the standard close button and an inset content area
-    * PanelTabButtonTemplate tabs along the bottom edge, as on the
-      character and spellbook windows
+  The main window, laid out like Blizzard's Quest Log (v0.4.0):
+    * ButtonFrameTemplate: frame, round player portrait, title bar and
+      the standard close button
+    * an open book inside it: two parchment pages (UI:PageAreas gives a
+      page its left and right areas) and a footer of red buttons under
+      the book (UI:SetFooter), ending with Close
+    * PanelTabButtonTemplate tabs along the bottom edge
   Movable (drag anywhere on the frame border/title), resizable (bottom-right
   grip), closes with Escape or the X, remembers position, size and tab.
   If a template is missing on the client, a plain fallback frame is drawn.
@@ -17,7 +19,7 @@
 ]]
 
 local _, CoA = ...
-local Theme, Compat = CoA.Theme, CoA.Compat
+local Theme, Compat, Widgets = CoA.Theme, CoA.Compat, CoA.Widgets
 local C = Theme.C
 
 local UI = {}
@@ -27,6 +29,7 @@ UI.pages = {}
 UI.pageOrder = {}
 
 local MIN_W, MIN_H, MAX_W, MAX_H = 700, 480, 1600, 1100
+local LEFT_W, FOOTER_H = 310, 34
 local DEFAULT_W, DEFAULT_H = 820, 580
 
 function UI:RegisterPage(key, def)
@@ -202,13 +205,55 @@ function UI:CreateMainFrame()
     if subtitle.SetWordWrap then subtitle:SetWordWrap(false) end
     f.subtitle = subtitle
 
-    -- Content host inside the inset.
+    -- The open book: two parchment pages inside the inset, with a footer
+    -- strip for the page's buttons underneath (like the Quest Log).
     local content = CreateFrame("Frame", nil, f)
     local inset = f.Inset or f
-    content:SetPoint("TOPLEFT", inset, "TOPLEFT", 10, -10)
-    content:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -8, 8)
+    content:SetPoint("TOPLEFT", inset, "TOPLEFT", 4, -4)
+    content:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -4, FOOTER_H)
     f.content = content
     f.pageFrames = {}
+
+    local spineEdge = { 0.24, 0.15, 0.05, 1 }
+    local left = CreateFrame("Frame", nil, content)
+    left:SetPoint("TOPLEFT")
+    left:SetPoint("BOTTOMLEFT")
+    left:SetWidth(LEFT_W)
+    Theme.Parchment(left, "left")
+    f.leftPage = left
+    local right = CreateFrame("Frame", nil, content)
+    right:SetPoint("TOPLEFT", left, "TOPRIGHT", 0, 0)
+    right:SetPoint("BOTTOMRIGHT")
+    Theme.Parchment(right, "right")
+    f.rightPage = right
+    Theme.Border(content, spineEdge, -1, "OVERLAY")
+    local spine = Theme.SolidTexture(content, "OVERLAY", { 0.24, 0.15, 0.05, 0.8 })
+    spine:SetWidth(1)
+    spine:SetPoint("TOP", left, "TOPRIGHT", 0, 0)
+    spine:SetPoint("BOTTOM", left, "BOTTOMRIGHT", 0, 0)
+
+    -- Footer buttons: the page's own (right to left) and Close.
+    f.footer = {}
+    local close = Widgets.Button(f, "Close", 90, 22)
+    close:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -6, 6)
+    close:SetScript("OnClick", function() UI:Hide() end)
+    f.footerClose = close
+    local prevBtn = close
+    for i = 1, 3 do
+        local b = Widgets.Button(f, "", 120, 22)
+        b:SetPoint("RIGHT", prevBtn, "LEFT", -6, 0)
+        b:Hide()
+        b:SetScript("OnEnter", function(self)
+            if self.tooltip and GameTooltip then
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:AddLine(self.tooltip, 1, 0.82, 0, true)
+                GameTooltip:Show()
+            end
+        end)
+        b:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+        f.footer[i] = b
+        prevBtn = b
+    end
 
     CreateTabs(f)
 
@@ -275,17 +320,55 @@ function UI:ShowPage(key)
 
     for k, frame in pairs(f.pageFrames) do frame:SetShown(k == key) end
     SelectTab(f, key)
+    self:SetFooter({})
 
     local page = f.pageFrames[key]
     if not page then
         page = def.create(f.content)
         page:SetAllPoints(f.content)
+        page:SetFrameLevel(f.content:GetFrameLevel() + 5)
         f.pageFrames[key] = page
     end
     page:Show()
     self.current = key
     CoA.db.settings.window.lastTab = key
     if def.refresh then def.refresh(page) end
+end
+
+-- buttons = { { text, onClick, disabled = bool, tooltip = string }, ... }
+-- Listed right to left, next to Close. Pages call this in their refresh.
+function UI:SetFooter(buttons)
+    local f = self.frame
+    if not f then return end
+    buttons = buttons or {}
+    for i, b in ipairs(f.footer) do
+        local def = buttons[i]
+        if def then
+            b:SetText(def.text)
+            local fs = b.label or (b.GetFontString and b:GetFontString())
+            local w = fs and fs.GetStringWidth and fs:GetStringWidth() or 0
+            b:SetWidth(math.max(100, (w or 0) + 30))
+            b:SetScript("OnClick", def.onClick)
+            if def.disabled then b:Disable() else b:Enable() end
+            b.tooltip = def.tooltip
+            b:Show()
+        else
+            b:Hide()
+        end
+    end
+end
+
+-- Two frames for a page's content, laid over the left and right pages of
+-- the book (with margins), parented to the page so they hide with it.
+function UI:PageAreas(page)
+    local f = self.frame
+    local L = CreateFrame("Frame", nil, page)
+    L:SetPoint("TOPLEFT", f.leftPage, "TOPLEFT", 12, -12)
+    L:SetPoint("BOTTOMRIGHT", f.leftPage, "BOTTOMRIGHT", -10, 10)
+    local R = CreateFrame("Frame", nil, page)
+    R:SetPoint("TOPLEFT", f.rightPage, "TOPLEFT", 22, -14)
+    R:SetPoint("BOTTOMRIGHT", f.rightPage, "BOTTOMRIGHT", -8, 10)
+    return L, R
 end
 
 function UI:RefreshCurrent()

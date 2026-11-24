@@ -1,16 +1,14 @@
 --[[
-  Chronicles of Azeroth - UI/Pages/Challenges.lua  (Phase 3)
+  Chronicles of Azeroth - UI/Pages/Challenges.lua
 
-  The Challenges chapter: pick up to five personal challenges, follow their
-  progress and abandon them. Challenges can be taken again after they are
-  completed or failed.
+  The Challenges chapter as a book, like the Quest Log: the left page lists
+  the challenges under way and every other challenge by category; the right
+  page shows the chosen one, with Accept or Abandon in the footer.
 ]]
 
 local _, CoA = ...
 local Theme, Widgets, Util = CoA.Theme, CoA.Widgets, CoA.Util
 local C = Theme.C
-
-local ROW_H = 64
 
 local function CategoryLabel(key)
     for _, c in ipairs(CoA.ChallengeData.CATEGORIES) do
@@ -19,187 +17,138 @@ local function CategoryLabel(key)
     return key
 end
 
-local function CreateRow(parent)
-    local row = CreateFrame("Frame", nil, parent)
-    local bg = Theme.SolidTexture(row, "BACKGROUND", { 1, 1, 1, 0.03 })
-    bg:SetPoint("TOPLEFT", 0, -2); bg:SetPoint("BOTTOMRIGHT", 0, 2)
-    row.bg = bg
-    row.accent = Theme.SolidTexture(row, "ARTWORK", C.gold)
-    row.accent:SetPoint("TOPLEFT", 0, -2); row.accent:SetPoint("BOTTOMLEFT", 0, 2); row.accent:SetWidth(2)
+local function Create(parent)
+    local page = CreateFrame("Frame", nil, parent)
+    local L, R = CoA.UI:PageAreas(page)
 
-    row.icon = Theme.Icon(row, 40)
-    row.icon:SetPoint("LEFT", 12, 0)
-    row.name = Theme.Heading(row, 14)
-    row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 12, -2)
-    row.name:SetPoint("RIGHT", row, "RIGHT", -200, 0)
-    if row.name.SetWordWrap then row.name:SetWordWrap(false) end
-    row.desc = Theme.Text(row, 12, C.ink)
-    row.desc:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -3)
-    row.desc:SetPoint("RIGHT", row, "RIGHT", -200, 0)
-    if row.desc.SetWordWrap then row.desc:SetWordWrap(false) end
-    row.meta = Theme.Text(row, 10, C.inkFaint)
-    row.meta:SetPoint("TOPLEFT", row.desc, "BOTTOMLEFT", 0, -4)
-    row.meta:SetPoint("RIGHT", row, "RIGHT", -200, 0)
-    if row.meta.SetWordWrap then row.meta:SetWordWrap(false) end
+    page.heading = Theme.BookTitle(L, 20)
+    page.heading:SetPoint("TOPLEFT", 2, 0)
+    page.heading:SetText("Challenges")
+    page.summary = Theme.Ink(L, 12, C.bookMuted)
+    page.summary:SetPoint("TOPLEFT", page.heading, "BOTTOMLEFT", 0, -4)
+    local rule = Theme.InkRule(L)
+    rule:SetPoint("TOPLEFT", 2, -48); rule:SetPoint("RIGHT", L, "RIGHT", -4, 0)
 
-    row.bar = Widgets.ProgressBar(row, 170, 14)
-    row.bar:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -12)
+    page.list = Widgets.SelectList(L, 24, function() page:Render() end)
+    page.list:SetPoint("TOPLEFT", 0, -52)
+    page.list:SetPoint("BOTTOMRIGHT", 0, 0)
 
-    row.button = Widgets.Button(row, "Accept", 110, 22)
-    row.button:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -12, 10)
-    row.button:SetScript("OnClick", function(self)
-        local item = row.item
-        if not item then return end
+    page.doc = Widgets.Document(R)
+    page.doc.area:SetAllPoints()
+    page.doc.area.OnWidthChanged = function() if page:IsShown() then page:Render() end end
+
+    function page:Toggle()
+        local sel = self.selected
+        if not sel then return end
         local Ch = CoA.Challenges
-        if Ch:IsActive(item.def.id) then
-            Ch:Abandon(item.def.id)
+        if Ch:IsActive(sel.def.id) then
+            Ch:Abandon(sel.def.id)
             CoA.Compat.PlaySound("IG_QUEST_LOG_ABANDON_QUEST", 846)
         else
-            local ok, reason = Ch:Accept(item.def.id)
+            local ok, reason = Ch:Accept(sel.def.id)
             if ok then
                 CoA.Compat.PlaySound("IG_QUEST_LIST_OPEN", 875)
             elseif reason then
                 CoA:Print(reason)
             end
         end
-    end)
-    row.button:SetScript("OnEnter", function(self)
-        if row.reason and GameTooltip then
-            GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:AddLine(row.reason, 1, 0.82, 0, true)
-            GameTooltip:Show()
-        end
-    end)
-    row.button:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
-
-    row.note = Theme.Text(row, 10, C.inkFaint)
-    row.note:SetPoint("BOTTOMRIGHT", row.button, "TOPRIGHT", 0, 4)
-    row.note:SetJustifyH("RIGHT")
-    return row
-end
-
-local function UpdateRow(row, item, index)
-    local Ch = CoA.Challenges
-    local def, state = item.def, item.state
-    row.item = item
-    row.bg:SetShown(index % 2 == 0)
-    row.icon.icon:SetTexture(def.icon)
-    row.icon.icon:SetDesaturated(not state and not item.canAccept)
-    Theme.SetBorderColor(row.icon.edges, state and C.gold or { 0.35, 0.35, 0.35, 1 })
-    row.accent:SetShown(state ~= nil)
-
-    row.name:SetText(def.name)
-    local nc = state and C.gold or (item.canAccept and C.gold or C.inkMuted)
-    row.name:SetTextColor(nc[1], nc[2], nc[3])
-    row.desc:SetText(def.desc)
-    local dc = (state or item.canAccept) and C.ink or C.inkFaint
-    row.desc:SetTextColor(dc[1], dc[2], dc[3])
-
-    local meta = { CategoryLabel(def.category) }
-    local done = Ch:GetCompleted(def.id)
-    if done then
-        meta[#meta + 1] = string.format("Completed %d time%s, last %s", done.count,
-            done.count == 1 and "" or "s", Util.FormatLongDate(done.last))
     end
-    local failed = Ch:GetFailed(def.id)
-    if failed > 0 then meta[#meta + 1] = string.format("Failed %d", failed) end
-    if def.failOn == "death" then meta[#meta + 1] = Theme.Hex(C.blood) .. "Fails if you die|r" end
-    if state then meta[#meta + 1] = "Taken " .. Util.FormatDay(state.accepted) end
-    if state and state.zone and def.id == "localhero" then meta[#meta + 1] = "Region: " .. state.zone end
-    row.meta:SetText(table.concat(meta, "  \194\183  "))
-
-    row.reason = nil
-    if state then
-        row.bar:Show()
-        row.bar:SetProgress(state.progress or 0, def.target,
-            string.format("%d / %d", state.progress or 0, def.target))
-        row.button:SetText("Abandon")
-        row.button:Enable()
-        row.note:SetText("")
-    else
-        row.bar:Hide()
-        row.button:SetText("Accept")
-        if item.canAccept then
-            row.button:Enable()
-            row.note:SetText("")
-        else
-            row.button:Disable()
-            row.reason = item.reason
-            row.note:SetText(item.reason or "")
-        end
-    end
-end
-
-local function Create(parent)
-    local page = CreateFrame("Frame", nil, parent)
-    page.filter = "all"
-
-    page.summary = Theme.Heading(page, 16)
-    page.summary:SetPoint("TOPLEFT", 2, -2)
-    page.sub = Theme.Text(page, 12, C.inkMuted)
-    page.sub:SetPoint("TOPLEFT", page.summary, "BOTTOMLEFT", 0, -5)
-    page.sub:SetPoint("RIGHT", page, "RIGHT", -14, 0)
-
-    page.chips = {}
-    local filters = { { key = "all", label = "All" }, { key = "active", label = "Under way" } }
-    for _, c in ipairs(CoA.ChallengeData.CATEGORIES) do filters[#filters + 1] = c end
-    local prev
-    for _, f in ipairs(filters) do
-        local chip = Widgets.Chip(page, f.label)
-        if prev then chip:SetPoint("LEFT", prev, "RIGHT", 4, 0) else chip:SetPoint("TOPLEFT", 0, -46) end
-        chip.key = f.key
-        chip:SetScript("OnClick", function() page.filter = f.key; page:Render() end)
-        page.chips[#page.chips + 1] = chip
-        prev = chip
-    end
-
-    page.list = Widgets.VirtualList(page, ROW_H, CreateRow, UpdateRow)
-    page.list:SetPoint("TOPLEFT", 0, -78)
-    page.list:SetPoint("BOTTOMRIGHT", 0, 0)
-
-    page.empty = Theme.Text(page, 13, C.inkFaint)
-    page.empty:SetPoint("TOP", page.list, "TOP", 0, -40)
-    page.empty:SetJustifyH("CENTER")
-    page.empty:SetText("No challenges under way. Choose one from All to begin.")
 
     function page:Render()
         local Ch = CoA.Challenges
-        for _, chip in ipairs(self.chips) do chip:SetSelected(chip.key == self.filter) end
-
         local active = Ch:CountActive()
-        self.summary:SetText(string.format("Challenges under way: %d of %d", active, Ch.MAX_ACTIVE))
-        self.sub:SetText(string.format(
-            "Progress counts from the moment you accept. %d challenge%s completed so far.",
-            Ch:CountCompleted(), Ch:CountCompleted() == 1 and "" or "s"))
+        self.summary:SetText(string.format("%d of %d under way  \194\183  %d completed",
+            active, Ch.MAX_ACTIVE, Ch:CountCompleted()))
 
-        local items = {}
+        local items, under = {}, {}
+        local byCat = {}
         for _, def in ipairs(Ch:GetDefs()) do
             local state = Ch:GetState(def.id)
-            local show = self.filter == "all" or (self.filter == "active" and state) or def.category == self.filter
-            if show then
-                local ok, reason = true, nil
-                if not state then ok, reason = Ch:CanAccept(def) end
-                items[#items + 1] = { def = def, state = state, canAccept = ok, reason = reason }
+            local ok, reason = true, nil
+            if not state then ok, reason = Ch:CanAccept(def) end
+            local it = { key = def.id, def = def, state = state, canAccept = ok, reason = reason,
+                         icon = def.icon, text = def.name }
+            if state then
+                it.right = (state.progress or 0) .. "/" .. def.target
+                under[#under + 1] = it
+            else
+                local done = Ch:GetCompleted(def.id)
+                it.right = done and (Theme.Hex(C.bookGreen) .. "Done|r") or nil
+                it.dim = not ok and Ch:CountActive() < Ch.MAX_ACTIVE
+                byCat[def.category] = byCat[def.category] or {}
+                table.insert(byCat[def.category], it)
             end
         end
-        table.sort(items, function(a, b)
-            if (a.state ~= nil) ~= (b.state ~= nil) then return a.state ~= nil end
-            if a.state and b.state then
-                local fa = (a.state.progress or 0) / a.def.target
-                local fb = (b.state.progress or 0) / b.def.target
-                if fa ~= fb then return fa > fb end
+        if #under > 0 then
+            items[#items + 1] = { header = "Under way" }
+            for _, it in ipairs(under) do items[#items + 1] = it end
+        end
+        for _, cat in ipairs(CoA.ChallengeData.CATEGORIES) do
+            if byCat[cat.key] then
+                items[#items + 1] = { header = cat.label }
+                for _, it in ipairs(byCat[cat.key]) do items[#items + 1] = it end
             end
-            if a.canAccept ~= b.canAccept then return a.canAccept end
-            return a.def.order < b.def.order
-        end)
-        self.empty:SetShown(#items == 0)
-        self.list:SetItems(items)
+        end
+        local sel = self.list:SetSelectableItems(items)
+        self.selected = sel
+
+        local d = self.doc
+        d:Begin()
+        local footer = {}
+        if sel then
+            local def, state = sel.def, sel.state
+            d:Title(def.name)
+            d:Sub(CategoryLabel(def.category) .. (state and "  \194\183  Under way" or ""))
+            d:Rule()
+            d:Para(def.desc)
+
+            d:Heading("Progress")
+            if state then
+                d:Bar(state.progress or 0, def.target)
+            else
+                d:Para(string.format("Not taken. Goal: %d.", def.target), C.bookMuted)
+            end
+            if def.failOn == "death" then d:Para("Dying while this challenge is under way fails it.", C.bookRed) end
+
+            d:Heading("Details")
+            local lines = {}
+            if state then
+                lines[#lines + 1] = "Taken " .. Util.FormatLongDate(state.accepted) ..
+                    (state.zone and (" in " .. state.zone) or "") .. "."
+            end
+            if def.id == "localhero" and state and state.zone then
+                lines[#lines + 1] = "Only quests completed in " .. state.zone .. " count."
+            end
+            local done = Ch:GetCompleted(def.id)
+            if done then
+                lines[#lines + 1] = string.format("Completed %d time%s, last on %s.", done.count,
+                    done.count == 1 and "" or "s", Util.FormatLongDate(done.last))
+            end
+            local failed = Ch:GetFailed(def.id)
+            if failed > 0 then lines[#lines + 1] = string.format("Failed %d time%s.", failed, failed == 1 and "" or "s") end
+            if def.category == "combat" or def.category == "social" then
+                lines[#lines + 1] = "Kills inside dungeons do not count."
+            end
+            if not state and sel.reason then lines[#lines + 1] = sel.reason end
+            lines[#lines + 1] = "Progress counts from the moment you accept, and the challenge can be taken again."
+            for _, l in ipairs(lines) do d:Para(l) end
+
+            if state then
+                footer[1] = { text = "Abandon Challenge", onClick = function() page:Toggle() end }
+            else
+                footer[1] = { text = "Accept", onClick = function() page:Toggle() end,
+                              disabled = not sel.canAccept, tooltip = sel.reason }
+            end
+        end
+        d:End(self.lastKey ~= (sel and sel.key))
+        self.lastKey = sel and sel.key
+        CoA.UI:SetFooter(footer)
     end
     return page
 end
 
 CoA.UI:RegisterPage("challenges", {
-    label = "Challenges", icon = "Interface\\Icons\\Ability_Warrior_BattleShout", order = 4,
+    label = "Challenges", order = 4,
     create = Create,
     refresh = function(page) page:Render() end,
 })
