@@ -1,0 +1,220 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Marcellus&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#ffd100;--F:'Marcellus',serif;--M:'MedievalSharp',serif;--C:'Cinzel',serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1000px;height:720px;background:radial-gradient(ellipse at 30% 20%,#556644 0%,#2c3626 45%,#151a12 100%);font-family:var(--F);overflow:hidden;position:relative}
+.tag{position:absolute;left:12px;top:10px;color:#ddd;font:12px var(--F);background:rgba(0,0,0,.6);padding:4px 10px;border:1px solid rgba(255,255,255,.15);z-index:30}
+.t{text-shadow:1px -1px 0 #000,1px 1px 0 #000}
+.ic{position:relative;flex:none;background:#000;border:1px solid #222}
+.ic span{display:flex;width:100%;height:100%;align-items:center;justify-content:center}
+.ic svg{width:70%;height:70%}
+
+/* ===== Direction A: Achievement-frame style ===== */
+.A .win{position:absolute;left:80px;top:60px;width:840px;height:590px;border-radius:6px;
+  background:#2a1d10;padding:14px;
+  box-shadow:0 0 0 2px #0c0804,0 0 0 5px #8c6a2c,0 0 0 7px #e2c063,0 0 0 9px #6b4e1c,0 0 0 11px #120c05,0 16px 50px rgba(0,0,0,.8)}
+.A .corner{position:absolute;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff0a8,#d4a83a 45%,#6b4a14 80%);box-shadow:0 0 0 2px #120c05;z-index:3}
+.A .banner{position:absolute;left:50%;top:-22px;width:380px;margin-left:-190px;height:44px;border-radius:4px;
+  background:linear-gradient(#7a1a12,#4a0c08);box-shadow:0 0 0 2px #120c05,0 0 0 4px #c9a04a,0 0 0 6px #120c05,0 4px 10px rgba(0,0,0,.7);
+  text-align:center;font:700 19px/44px var(--C);color:var(--gold);letter-spacing:1px;z-index:4}
+.A .close{position:absolute;right:-6px;top:-6px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e04030,#7a0e0a 70%);box-shadow:0 0 0 2px #e2c063,0 0 0 4px #120c05;color:#ffe;font:bold 14px/26px Arial;text-align:center;z-index:5}
+.A .inner{position:absolute;inset:14px;background:
+   repeating-linear-gradient(90deg,rgba(0,0,0,.18) 0 2px,transparent 2px 28px),
+   linear-gradient(#3b2914,#24180b);border:2px solid #120c05;box-shadow:inset 0 0 30px rgba(0,0,0,.7)}
+.A .side{position:absolute;left:10px;top:44px;bottom:12px;width:190px}
+.A .cat{height:30px;margin-bottom:4px;border-radius:3px;background:linear-gradient(#5a3e1c,#3a2610);box-shadow:inset 0 0 0 1px #8c6a2c,0 1px 2px #000;
+  font:13px/30px var(--F);color:var(--gold);padding-left:14px}
+.A .cat.on{background:linear-gradient(#8c6a2c,#5a3e1c);color:#fff;box-shadow:inset 0 0 0 1px #ffe08a,0 0 8px rgba(255,209,0,.35)}
+.A .cat.sub{margin-left:14px;height:26px;line-height:26px;font-size:12px}
+.A .main{position:absolute;left:212px;right:12px;top:44px;bottom:12px;overflow:hidden}
+.A .summary{position:absolute;left:10px;right:10px;top:10px;height:22px;display:flex;justify-content:space-between;align-items:center}
+.A .pts{font:700 15px var(--C);color:var(--gold)}
+.A .bar{position:relative;height:16px;background:#000;border:1px solid #8c6a2c;border-radius:2px}
+.A .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#3fcc4e,#127a1e 60%,#0b5414)}
+.A .bar b{position:absolute;inset:0;text-align:center;font:11px/15px var(--F);color:#fff;font-weight:normal;text-shadow:1px -1px 0 #000}
+.A .row{position:relative;height:78px;margin-bottom:6px;border-radius:4px;display:flex;align-items:center;padding:0 14px;
+  background:linear-gradient(#4a3418,#2c1e0c);box-shadow:inset 0 0 0 1px #6b4e1c,inset 0 0 0 2px #120c05,0 2px 3px rgba(0,0,0,.6)}
+.A .row.done{background:linear-gradient(#6b5426,#3f2e12);box-shadow:inset 0 0 0 1px #e2c063,inset 0 0 0 2px #120c05,0 2px 3px rgba(0,0,0,.6)}
+.A .row.lock{filter:saturate(.25) brightness(.75)}
+.A .row .ic{border:2px solid #c9a04a;border-radius:3px;box-shadow:0 0 0 1px #000}
+.A .row .tx{margin-left:14px;flex:1;min-width:0}
+.A .row .n{font:700 15px var(--C);color:var(--gold)}
+.A .row .d{font:12px var(--F);color:#f1e6cc;margin-top:4px}
+.A .row .m{font:11px var(--F);color:#bda77a;margin-top:4px}
+.A .shield{width:50px;height:56px;margin-left:12px;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%);background:linear-gradient(#e2c063,#8c6a2c);display:flex;align-items:center;justify-content:center;font:700 16px var(--C);color:#2a1d10;padding-bottom:10px}
+.A .btn{display:inline-block;height:22px;padding:0 14px;font:12px/19px var(--F);color:var(--gold);border-radius:3px;background:linear-gradient(#a01510,#5c0805 55%,#3d0402);border:1px solid #c9a04a;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 1px 2px #000}
+.A .stat{display:flex;align-items:center;height:44px;padding:0 10px;margin-bottom:6px;border-radius:3px;background:linear-gradient(#4a3418,#2c1e0c);box-shadow:inset 0 0 0 1px #6b4e1c}
+.A .stat .l{flex:1;font:13px var(--F);color:#f1e6cc;margin-left:10px}
+.A .stat .v{font:700 16px var(--C);color:var(--gold)}
+.A .scroll{position:absolute;right:-2px;top:44px;bottom:0;width:16px;background:#120c05;border:1px solid #6b4e1c}
+.A .scroll i{position:absolute;left:2px;right:2px;top:20px;height:90px;border-radius:2px;background:linear-gradient(90deg,#8c6a2c,#e2c063,#8c6a2c)}
+
+/* ===== Direction B: Quest Log / book style ===== */
+.B .win{position:absolute;left:70px;top:58px;width:860px;height:600px;border-radius:6px;background:#1c130a;
+  box-shadow:0 0 0 3px #0a0603,0 0 0 6px #b48a3c,0 0 0 8px #5a3e16,0 0 0 10px #0a0603,0 16px 50px rgba(0,0,0,.8)}
+.B .head{position:absolute;left:0;right:0;top:0;height:46px;background:linear-gradient(#3b2612,#22150a);border-bottom:3px solid #b48a3c}
+.B .portrait{position:absolute;left:-18px;top:-18px;width:78px;height:78px;border-radius:50%;background:radial-gradient(circle at 50% 38%,#b08a60 0 22%,#7a5634 23% 36%,transparent 37%),radial-gradient(ellipse at 50% 112%,#5a4430 0 46%,transparent 47%),linear-gradient(#2d3b57,#151c2b);
+  box-shadow:0 0 0 3px #0a0603,0 0 0 6px #d8b060,0 0 0 8px #0a0603,0 4px 10px rgba(0,0,0,.7);z-index:5}
+.B .title{position:absolute;left:0;right:0;top:12px;text-align:center;font:700 18px var(--C);color:var(--gold);letter-spacing:1px}
+.B .close{position:absolute;right:8px;top:10px;width:26px;height:26px;border-radius:4px;background:radial-gradient(circle at 40% 35%,#d4302a,#7a0e0a 70%);box-shadow:0 0 0 2px #d8b060,0 0 0 3px #0a0603;color:#ffe;font:bold 14px/26px Arial;text-align:center}
+.B .book{position:absolute;left:14px;right:14px;top:62px;bottom:46px;display:flex;gap:0;box-shadow:0 0 0 2px #0a0603,0 0 0 4px #6b4a1c}
+.B .page{flex:1;position:relative;background:radial-gradient(ellipse at 50% 35%,rgba(255,250,225,.55),transparent 75%),radial-gradient(ellipse at 100% 100%,rgba(110,70,25,.35),transparent 55%),#e6d2a4;padding:18px 22px}
+.B .page.l{flex:0 0 330px;box-shadow:inset -14px 0 18px -10px rgba(60,35,10,.55)}
+.B .page.r{box-shadow:inset 14px 0 18px -10px rgba(60,35,10,.55)}
+.B h1{font:700 18px var(--C);color:#3a1f06;margin-bottom:4px}
+.B h2{font:700 14px var(--C);color:#3a1f06;margin:14px 0 6px}
+.B p,.B .p{font:13px/1.5 var(--F);color:#2a1a08}
+.B .rule{height:1px;background:linear-gradient(90deg,rgba(90,60,25,.7),transparent);margin:6px 0 10px}
+.B .qrow{display:flex;align-items:center;height:30px;padding:0 8px;font:13px var(--F);color:#2a1a08;border-radius:2px}
+.B .qrow .lv{width:44px;color:#6b4a1c;font-size:11px}
+.B .qrow.on{background:linear-gradient(90deg,rgba(255,230,140,.9),rgba(255,230,140,.2));box-shadow:inset 0 0 0 1px rgba(140,100,30,.5)}
+.B .qrow.hd{font:700 12px var(--C);color:#6b3a06;height:26px;margin-top:8px}
+.B .qrow .ic{margin-right:8px}
+.B .obj{font:13px/1.9 var(--F);color:#2a1a08}
+.B .obj b{color:#1e5e14;font-weight:normal}
+.B .bar{position:relative;height:16px;background:rgba(60,35,10,.25);border:1px solid #6b4a1c;margin:6px 0}
+.B .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#5cc060,#2a8a30)}
+.B .bar b{position:absolute;inset:0;text-align:center;font:11px/15px var(--F);color:#fff;font-weight:normal;text-shadow:1px -1px 0 #000}
+.B .foot{position:absolute;left:14px;right:14px;bottom:10px;height:26px;display:flex;gap:8px;justify-content:flex-end}
+.B .btn{display:inline-block;height:24px;padding:0 16px;font:12px/21px var(--F);color:var(--gold);border-radius:3px;background:linear-gradient(#a01510,#5c0805 55%,#3d0402);border:1px solid #c9a04a;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 1px 2px #000}
+.B .tabs{position:absolute;left:24px;top:100%;margin-top:-2px;display:flex;gap:3px}
+.B .tab{height:30px;padding:6px 16px 0;font:12px var(--F);color:var(--gold);background:linear-gradient(#3b2612,#1c130a);border:2px solid #b48a3c;border-top:none;border-radius:0 0 8px 8px}
+.B .tab.on{color:#fff;height:34px}
+.B .stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+.B .s{display:flex;justify-content:space-between;font:13px/1.9 var(--F);color:#2a1a08;border-bottom:1px dotted rgba(90,60,25,.4)}
+.B .s b{font-weight:normal;color:#3a1f06}
+.B .A{color:#8a5a10}
+</style></head><body>
+<div class="tag" id="tag"></div>
+<div id="root"></div>
+<script>
+const P={
+ head:['#7a5a3a','#3a2616','<circle cx="12" cy="9" r="4.5" fill="#f2d9a8"/><path d="M4 21c1-5 4-7 8-7s7 2 8 7z" fill="#f2d9a8"/>'],
+ shout:['#7a2a1a','#2a0a06','<path d="M4 9h4l7-5v16l-7-5H4z" fill="#f0c090"/><path d="M18 8c2 2 2 6 0 8" stroke="#f0c090" stroke-width="2" fill="none"/>'],
+ map:['#6a5a3a','#2a2214','<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" fill="#e6d3a0"/><path d="M9 4v14M15 6v14" stroke="#8a6a3a"/>'],
+ note:['#5a4a2a','#221a0e','<rect x="6" y="4" width="12" height="16" fill="#f3e6bf"/><path d="M8 8h8M8 11h8M8 14h5" stroke="#a07a3a"/>'],
+ light:['#7a6a2a','#2a2408','<circle cx="12" cy="12" r="4" fill="#fff3b0"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" stroke="#fff3b0" stroke-width="1.5"/>'],
+ skull:['#4a4a4a','#141414','<path d="M12 3a7 7 0 0 0-7 7c0 3 2 4 2 6h10c0-2 2-3 2-6a7 7 0 0 0-7-7z" fill="#e8e0d0"/><circle cx="9.5" cy="10" r="1.6"/><circle cx="14.5" cy="10" r="1.6"/><rect x="9" y="16" width="6" height="4" fill="#e8e0d0"/>'],
+ swords:['#4a4a5a','#16161e','<path d="M5 3l11 11M19 3L8 14" stroke="#d8d8e0" stroke-width="2"/><path d="M14 16l4 4M10 16l-4 4" stroke="#8a6a3a" stroke-width="2.5"/>'],
+ dragon:['#2a5a3a','#0a1e10','<path d="M4 14c3-8 9-10 16-8-4 1-5 3-5 5 3 0 4 2 4 5-3-2-6-1-9 1-2-3-4-3-6-3z" fill="#b8d8a0"/>'],
+ eye:['#2a4a6a','#0a1626','<ellipse cx="12" cy="12" rx="9" ry="5" fill="#e8f0ff"/><circle cx="12" cy="12" r="3" fill="#2a4a8a"/>'],
+ group:['#3a5a2a','#0e1e0a','<circle cx="8" cy="9" r="3" fill="#e8d8b0"/><circle cx="16" cy="9" r="3" fill="#e8d8b0"/><path d="M2 20c1-4 3-6 6-6s5 2 6 6zM10 20c1-4 3-6 6-6s5 2 6 6z" fill="#e8d8b0"/>'],
+ shield:['#6a5a2a','#221a08','<path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z" fill="#f0e0a0"/>'],
+ portal:['#3a2a6a','#120a2a','<ellipse cx="12" cy="12" rx="6" ry="8" fill="none" stroke="#b9a0ff" stroke-width="2.5"/><ellipse cx="12" cy="12" rx="3" ry="5" fill="#6a4ad0"/>'],
+ watch:['#4a4a5a','#16161e','<circle cx="12" cy="13" r="7" fill="#e8d8a0"/><path d="M12 13V9M12 13l3 2" stroke="#3a2a1a" stroke-width="1.5"/>'],
+ trophy:['#7a6a2a','#2a220a','<path d="M7 3h10v5a5 5 0 0 1-10 0z" fill="#f0d060"/><rect x="10.5" y="13" width="3" height="4" fill="#f0d060"/><rect x="7" y="17" width="10" height="3" fill="#f0d060"/>'],
+};
+function ic(k,s){const [a,b,g]=P[k];return `<div class="ic" style="width:${s}px;height:${s}px"><span style="background:radial-gradient(circle at 35% 30%,${a},${b})"><svg viewBox="0 0 24 24">${g}</svg></span></div>`}
+const q=new URLSearchParams(location.search), dir=q.get('d')||'A', pg=q.get('p')||'chal';
+document.body.className=dir;
+document.getElementById('tag').textContent=dir==='A'?'Direction A: modelled on the Achievements window · mockup':'Quest Log book layout (v0.5.0) · mockup, not an in-game screenshot · stand-in fonts, art and icons';
+const R=document.getElementById('root');
+const CH=[['swords','Thin the Herd','Defeat 30 enemies in the open world.','Combat · Taken November 24',[22,30],1],
+ ['note','Local Hero','Complete 5 quests in the region where you accepted this challenge.','General · Region: The Barrens',[3,5],1],
+ ['light','Survivor','Gain a level without dying. Dying fails the challenge.','General · Fails if you die',[0,1],1],
+ ['eye',"Wayfarer's Road",'Uncover 5 hidden places on your world map.','Exploration · Completed once',null,0],
+ ['dragon','Hunter of Legends','Slay a rare creature.','Combat',null,0],
+ ['shield','Flawless','Complete a dungeon without dying inside it.','Dungeons · Requires level 10',null,-1]];
+const STATS=[['watch','Time played','4d 7h'],['map','Regions explored','14'],['note','Quests completed','187'],['portal','Dungeons completed','3'],['swords','Enemies defeated','1,284'],['skull','Deaths','9'],['dragon','Rares slain / spotted','6 / 9'],['trophy','Milestones earned','14 / 45']];
+if(dir==='A'){
+ const cats=pg==='chal'?[['Summary'],['Character'],['Journal'],['Milestones'],['Challenges',1],['Under way',2,1],['Exploration',2],['Combat',2],['Dungeons',2],['Social',2],['Exploration'],['Event History']]
+   :[['Summary'],['Character',1],['Journal'],['Milestones'],['Challenges'],['Exploration'],['Event History']];
+ let main='';
+ if(pg==='chal'){
+  main=`<div class="summary"><span class="pts t">Challenges under way: 3 of 5</span><div class="bar" style="width:220px"><i style="width:132px"></i><b>3 / 5</b></div></div>
+  <div style="position:absolute;left:10px;right:24px;top:44px">${CH.map(c=>`<div class="row ${c[5]==1?'done':''} ${c[5]<0?'lock':''}">${ic(c[0],50)}<div class="tx"><div class="n t">${c[1]}</div><div class="d t">${c[2]}</div><div class="m">${c[3]}</div></div>
+   <div style="width:190px;text-align:right">${c[4]?`<div class="bar" style="width:180px;margin-left:auto"><i style="width:${Math.round(180*c[4][0]/c[4][1])}px"></i><b>${c[4][0]} / ${c[4][1]}</b></div><div style="margin-top:8px"><span class="btn">Abandon</span></div>`:`<span class="btn" ${c[5]<0?'style="filter:grayscale(1)"':''}>Accept</span>`}</div></div>`).join('')}</div>
+  <div class="scroll"><i></i></div>`;
+ } else {
+  main=`<div style="position:absolute;left:10px;right:24px;top:10px">
+   <div class="row done" style="height:110px">${ic('head',80)}<div class="tx"><div class="n t" style="font-size:24px;color:#ff7d0a">Thalrin</div><div class="d t" style="font-size:14px">the Monster Hunter</div><div class="m" style="font-size:13px;color:#f1e6cc">Level 24 Tauren Druid · Horde</div></div><div class="shield" style="width:70px;height:78px;font-size:22px">12</div></div>
+   <div class="pts t" style="margin:14px 0 8px 4px">Deeds &amp; Tallies</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">${STATS.map(s=>`<div class="stat">${ic(s[0],30)}<div class="l t">${s[1]}</div><div class="v t">${s[2]}</div></div>`).join('')}</div>
+   <div class="pts t" style="margin:10px 0 8px 4px">Whereabouts</div>
+   <div class="t" style="font:13px var(--F);color:#f1e6cc;margin-left:4px">The Barrens, The Crossroads · first recorded November 15 · 9 visits · 41 quests here</div></div>
+   <div class="scroll"><i style="height:200px"></i></div>`;
+ }
+ R.innerHTML=`<div class="win"><div class="inner">
+  <div class="side">${cats.map(c=>`<div class="cat t ${c[1]==1?'on':''} ${c[1]==2?'sub':''} ${c[2]?'on':''}">${c[0]}</div>`).join('')}</div>
+  <div class="main">${main}</div></div>
+  <div class="banner t">Chronicles of Azeroth</div><div class="close">✕</div>
+  ${[[0,0],[1,0],[0,1],[1,1]].map(([x,y])=>`<div class="corner" style="${x?'right':'left'}:-15px;${y?'bottom':'top'}:-15px"></div>`).join('')}</div>`;
+} else {
+ let left='',right='';
+ if(pg==='chal'){
+  left=`<h1>Challenges</h1><div class="p" style="font-size:12px;color:#5a3e16">3 of 5 under way</div><div class="rule"></div>
+   <div class="qrow hd">Under way</div>${CH.filter(c=>c[5]==1).map((c,i)=>`<div class="qrow ${i==0?'on':''}">${ic(c[0],20)}${c[1]}<span style="margin-left:auto;font-size:11px;color:#6b4a1c">${c[4][0]}/${c[4][1]}</span></div>`).join('')}
+   <div class="qrow hd">Exploration</div><div class="qrow">${ic('eye',20)}Wayfarer's Road</div><div class="qrow">${ic('map',20)}Into the Unknown</div>
+   <div class="qrow hd">Combat</div><div class="qrow">${ic('dragon',20)}Hunter of Legends</div><div class="qrow">${ic('swords',20)}Giant Slayer</div>
+   <div class="qrow hd">Dungeons</div><div class="qrow" style="color:#7a6648">${ic('shield',20)}Flawless</div>`;
+  right=`<h1>Thin the Herd</h1><div class="rule"></div>
+   <p>The roads grow dangerous when the wild things multiply. Prove your worth by thinning their numbers in the open world.</p>
+   <h2>Objective</h2><div class="obj">Defeat 30 enemies in the open world: <b>22 / 30</b></div>
+   <div class="bar" style="width:300px"><i style="width:220px"></i><b>22 / 30</b></div>
+   <h2>Details</h2><div class="obj">Taken November 24, 2026 in The Barrens<br>Completed before: once (November 20)<br>Kills inside dungeons do not count.</div>`;
+ } else {
+  left=`<h1>Thalrin</h1><div class="p" style="color:#5a3e16">the Monster Hunter</div><div class="rule"></div>
+   <div class="p">Level 24 Tauren Druid<br>Horde</div><h2>On the road</h2><div class="p" style="font:700 34px var(--C);color:#3a1f06">12 days</div><div class="p" style="font-size:12px;color:#5a3e16">Chronicle begun November 13, 2026</div>
+   <h2>Whereabouts</h2><div class="p">The Barrens, The Crossroads<br><span style="font-size:12px;color:#5a3e16">First recorded November 15 · 9 visits · 41 quests here</span></div>`;
+  right=`<h1>Deeds &amp; Tallies</h1><div class="rule"></div><div class="stats">${STATS.map(s=>`<div class="s">${s[1]}<b>${s[2]}</b></div>`).join('')}<div class="s">Bosses defeated<b>11</b></div><div class="s">Hidden places<b>47</b></div><div class="s">Challenges under way<b>3 / 5</b></div><div class="s">Nights at camp<b>23</b></div></div>
+   <h2>Latest in the chronicle</h2><div class="obj">You completed the challenge "Thin the Herd".<br>You have reached level 24.<br>You completed the quest "Lost in Battle".</div>`;
+ }
+ if(pg==='journal'){
+  left=`<h1>Journal</h1><div class="p" style="font-size:12px;color:#5a3e16">Written from your own deeds, one day at a time.</div><div class="rule"></div>
+   <div class="qrow hd">November 2026</div>${[['November 24','The Barrens',1],['November 23','The Barrens'],['November 22','Stonetalon Mountains'],['November 21','Tirisfal Glades'],['November 19','The Barrens'],['November 18','Mulgore'],['November 15','The Barrens'],['November 14','Mulgore'],['November 13','Durotar']].map(r=>`<div class="qrow ${r[2]?'on':''}">${r[0]}&nbsp;&nbsp;<span style="color:#7a5a2a">${r[1]}</span></div>`).join('')}`;
+  right=`<h1 style="font:20px var(--M)">November 24 - The Barrens</h1><div class="p" style="font-size:12px;color:#5a3e16">2026</div><div class="rule"></div>
+   <p style="margin-bottom:10px">My road took me through Thunder Bluff, The Barrens and Stonetalon Mountains.</p>
+   <p style="margin-bottom:10px">For the first time, I set foot in Stonetalon Mountains. I descended into Wailing Caverns, not knowing what waited within, and saw it through to the end. I feel stronger. I have reached level 24.</p>
+   <p style="margin-bottom:10px">I completed 6 tasks for the people of these lands, among them "Serpentbloom", "Lost in Battle" and "The Angry Scytheclaws". I bested 87 foes. I kept my word and completed "Thin the Herd".</p>`;
+ }
+ if(pg==='ach'){
+  left=`<h1>Milestones</h1><div class="p" style="font-size:12px;color:#5a3e16">14 of 45 earned</div><div class="bar" style="width:200px"><i style="width:62px"></i><b>14 / 45</b></div>
+   <div class="qrow hd">Exploration</div><div class="qrow">${ic('map',20)}World Traveler<span style="margin-left:auto;font-size:11px;color:#1e5e14">Earned</span></div><div class="qrow">${ic('eye',20)}Pathfinder<span style="margin-left:auto;font-size:11px;color:#6b4a1c">31/50</span></div>
+   <div class="qrow hd">Combat</div><div class="qrow on">${ic('trophy',20)}Monster Hunter<span style="margin-left:auto;font-size:11px;color:#1e5e14">Earned</span></div><div class="qrow">${ic('swords',20)}Veteran<span style="margin-left:auto;font-size:11px;color:#6b4a1c">412/1000</span></div><div class="qrow">${ic('dragon',20)}Keen Eye<span style="margin-left:auto;font-size:11px;color:#6b4a1c">4/10</span></div>
+   <div class="qrow hd">Dungeons</div><div class="qrow">${ic('portal',20)}First Descent<span style="margin-left:auto;font-size:11px;color:#1e5e14">Earned</span></div>`;
+  right=`<h1>Monster Hunter</h1><div class="p" style="font-size:12px;color:#5a3e16">Combat</div><div class="rule"></div><p>Slay 10 rare creatures.</p>
+   <h2>Earned</h2><div class="obj"><b>November 24, 2026</b><br>At level 24, in The Barrens.</div><h2>Reward</h2><div class="obj">Title: the Monster Hunter</div>
+   <h2>Your title</h2><div class="obj">the Monster Hunter</div>`;
+ }
+ if(pg==='history'){
+  left=`<h1>Event History</h1><div class="p" style="font-size:12px;color:#5a3e16">412 entries in your chronicle</div>
+   <div style="margin:12px 0 8px;height:20px;background:#000;border:1px solid #666;border-radius:3px;font:12px/18px var(--F);color:#777;padding-left:22px">&#9906;&nbsp; Search the chronicle</div>
+   ${[['All',412,1],['Travels',96],['Growth',58],['Deeds',187],['Battles',41],['Chronicle',30]].map(r=>`<div class="qrow ${r[2]?'on':''}">${r[0]}<span style="margin-left:auto;font-size:11px;color:#6b4a1c">${r[1]}</span></div>`).join('')}`;
+  const F=[['#996600','shout','You completed the challenge "Thin the Herd".','November 24, 2026, 21:50 · The Barrens · Level 24'],['#996600','light','You have reached level 24.','November 24, 2026, 21:42 · The Barrens · Level 24'],['#995c13','note','You completed the quest "Lost in Battle".','November 24, 2026, 21:37 · The Barrens · Level 23'],['#8f2e26','dragon','You slew Humar the Pridelord, a rare creature.','November 24, 2026, 21:12 · The Barrens · Level 23'],['#3d7399','portal','You descended into Wailing Caverns (Normal).','November 24, 2026, 20:05 · The Barrens · Level 23'],['#8f2e26','skull','You were slain in The Barrens.','November 24, 2026, 19:58 · The Barrens · Level 23'],['#3d7399','map','You discovered Stonetalon Mountains.','November 24, 2026, 18:50 · Stonetalon Mountains · Level 23']];
+  right=`<h1>All entries</h1><div class="rule"></div>${F.map(f=>`<div style="display:flex;align-items:center;height:44px;border-left:2px solid ${f[0]};padding-left:8px;border-bottom:1px solid rgba(90,60,25,.25)">${ic(f[1],28)}<div style="margin-left:10px"><div class="p">${f[2]}</div><div class="p" style="font-size:11px;color:#7a6040">${f[3]}</div></div></div>`).join('')}`;
+ }
+
+ if(pg==='fellows'||pg==='sharing'){
+  left=`<h1>Fellows</h1><div class="p" style="font-size:12px;color:#5a3e16">Target a player who also keeps a chronicle, then press Inspect Target.</div><div class="rule"></div>
+   <div class="qrow hd">Settings</div><div class="qrow ${pg==='sharing'?'on':''}">${ic('note',20)}Sharing</div>
+   <div class="qrow hd">Chronicles</div><div class="qrow">${ic('head',20)}Thalrin&nbsp;<span style="color:#7a5a2a">(you)</span></div>
+   <div class="qrow ${pg==='fellows'?'on':''}">${ic('group',20)}Brannoc</div>
+   <div class="qrow" style="color:#7a6648">${ic('group',20)}Elowen<span style="margin-left:auto;font-size:11px;color:#6b4a1c">Private</span></div>
+   <div class="qrow" style="color:#7a6648">${ic('group',20)}Grukk<span style="margin-left:auto;font-size:11px;color:#6b4a1c">No answer</span></div>`;
+  if(pg==='fellows'){
+   const ST=[['Days on the road',12,30],['Milestones earned',14,19],['Quests completed',187,152],['Enemies defeated',1284,977],['Rares slain',6,2],['Bosses defeated',11,17],['Dungeons completed',3,5],['Regions explored',14,12],['Deaths',9,21]];
+   const g=(a,b)=>a>b?'color:#1e5e14':'';
+   const row=(l,a,b)=>`<div style="display:flex;font:13px/1.75 var(--F);color:#2a1a08;border-bottom:1px dotted rgba(90,60,25,.4)"><span style="flex:1">${l}</span><span style="width:70px;text-align:right;${g(a,b)}">${a.toLocaleString()}</span><span style="width:80px;text-align:right;${g(b,a)}">${b.toLocaleString()}</span></div>`;
+   const mrow=(l,a,b)=>`<div style="display:flex;font:13px/1.75 var(--F);color:#2a1a08;border-bottom:1px dotted rgba(90,60,25,.4)"><span style="flex:1">${l}</span><span style="width:70px;text-align:right;${a?'color:#1e5e14':'color:#8a7050'}">${a?'Earned':'-'}</span><span style="width:80px;text-align:right;${b?'color:#1e5e14':'color:#8a7050'}">${b?'Earned':'-'}</span></div>`;
+   right=`<h1>Brannoc</h1><div class="p" style="font-size:12px;color:#5a3e16">the Wayfarer · level 27 Dwarf Paladin</div><div class="p" style="font-size:11px;color:#8a7050">Received 21:14. Chronicles of Azeroth 0.5.0.</div><div class="rule"></div>
+    <div style="display:flex;font:700 12px var(--C);color:#6b3a06"><span style="flex:1"></span><span style="width:70px;text-align:right">You</span><span style="width:80px;text-align:right">Brannoc</span></div>
+    ${ST.map(r=>row(...r)).join('')}
+    <h2>Milestones</h2>${[['Monster Hunter',1,0],['World Traveler',1,1],['First Descent',1,1],['Wayfarer',0,1]].map(r=>mrow(...r)).join('')}`;
+  } else {
+   const ck=(on,l)=>`<div style="display:flex;align-items:center;gap:8px;font:13px/26px var(--F);color:#2a1a08"><span style="width:18px;height:18px;border:1px solid #6b4a1c;background:#f3e6bf;box-shadow:inset 0 1px 2px rgba(0,0,0,.4);font:bold 15px/16px Arial;color:#c89a10;text-align:center">${on?'✓':''}</span>${l}</div>`;
+   right=`<h1>Sharing</h1><div class="rule"></div><h2>Announce new milestones</h2>${ck(1,'In guild chat')}${ck(0,'In party chat')}
+    <p style="font-size:12px;color:#5a3e16;margin-top:6px">Milestones earned close together share one line. At most one line a minute per channel and five an hour, never during combat or a boss fight. Say is only used when you press Brag.</p>
+    <h2>Privacy</h2>${ck(1,'Let other players inspect my chronicle')}
+    <p style="font-size:12px;color:#5a3e16;margin-top:6px">They see your name, title, level, totals and earned milestones. Never your journal or where you are.</p>
+    <h2>In guild chat it looks like</h2><p style="font-size:12px;color:#40ff40;background:rgba(0,0,0,.75);padding:6px 8px;border-radius:2px">[Guild] [Thalrin]: [Chronicles] Thalrin earned the milestone "Monster Hunter" (Slay 10 rare creatures.) and the title "the Monster Hunter".</p>`;
+  }
+ }
+ const TABK={chal:'Challenges',char:'Character',journal:'Journal',ach:'Milestones',history:'Event History',fellows:'Fellows',sharing:'Fellows'};
+ R.innerHTML=`<div class="win"><div class="head"></div><div class="portrait"></div><div class="title t">Chronicles of Azeroth</div><div class="close">✕</div>
+  <div class="book"><div class="page l">${left}</div><div class="page r">${right}</div></div>
+  <div class="foot">${pg==='chal'?'<span class="btn">Abandon Challenge</span>':''}${pg==='ach'?'<span class="btn">Brag</span><span class="btn">Change Title</span>':''}${pg==='char'?'<span class="btn" style="box-shadow:0 0 0 2px #ffd100">Brag</span>':''}${pg==='fellows'||pg==='sharing'?'<span class="btn">Inspect Target</span>':''}<span class="btn">Close</span></div>
+  ${pg==='char'?`<div style="position:absolute;right:80px;bottom:44px;width:120px;background:rgba(0,0,0,.92);border:1px solid #888;border-radius:4px;padding:6px 0;font:13px/22px var(--F);color:#fff"><div style="padding:0 12px;color:#ffd100">Brag in...</div><div style="padding:0 12px">Say</div><div style="padding:0 12px;background:rgba(80,120,200,.5)">Party</div><div style="padding:0 12px">Guild</div></div><div style="position:absolute;left:14px;bottom:-62px;right:14px;font:12px var(--F);color:#a8d8ff;background:rgba(0,0,0,.6);padding:4px 8px">[Party] [Thalrin]: [Chronicles] Thalrin, the Monster Hunter: level 24, 14/45 milestones, 187 quests, 1,284 enemies defeated, 14 regions, 12 days on the road.</div>`:''}<div class="tabs">${['Character','Journal','Milestones','Challenges','Exploration','Event History','Fellows'].map(t=>`<div class="tab t ${TABK[pg]===t?'on':''}">${t}</div>`).join('')}</div></div>`;
+}
+</script></body></html>

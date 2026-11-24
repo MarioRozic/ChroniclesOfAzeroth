@@ -103,7 +103,7 @@ function Achievements:Unlock(def, quiet)
     }
     CoA.Feed:Add("achievement", { id = def.id, name = def.name, title = def.title })
     if CoA.Toast and not quiet then CoA.Toast:Show(def) end
-    CoA:Fire("ACHIEVEMENT_UNLOCKED", def)
+    CoA:Fire("ACHIEVEMENT_UNLOCKED", def, quiet and true or false)
 end
 
 function Achievements:CountUnlocked()

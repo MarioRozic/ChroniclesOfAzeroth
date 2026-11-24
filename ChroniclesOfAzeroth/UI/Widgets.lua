@@ -524,19 +524,142 @@ function Widgets.Document(parent)
             l:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + 4))
             l:SetText(p[1])
             if l.SetWordWrap then l:SetWordWrap(false) end
+            l:SetTextColor(C.bookInk[1], C.bookInk[2], C.bookInk[3])
             local r = Take("pairR")
             r:SetWidth(70)
             r:SetPoint("TOPRIGHT", content, "TOPLEFT", x + colW, -(y + 4))
             r:SetText(p[2])
+            r:SetJustifyH("RIGHT")
+            r:SetTextColor(C.bookHead[1], C.bookHead[2], C.bookHead[3])
             local d = Take("dots")
             d:SetWidth(colW)
             d:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + rowH - 2))
         end
         self.y = top + math.ceil(#list / cols) * rowH
     end
+    -- Comparison table: headers = { "", "You", "Thrall" },
+    -- rows = { { "Quests", "187", "203" }, ... }; the higher number is
+    -- printed in green, like Blizzard's achievement comparison.
+    function doc:Compare(headers, rows)
+        local width = Width()
+        local valW = math.min(110, math.floor(width * 0.24))
+        local labelW = width - 2 * valW
+        local rowH = 22
+        local y = self.y + 8
+        local function cell(kind, text, x, w, color, justify)
+            local fs = Take(kind)
+            fs:SetWidth(w)
+            fs:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + 4))
+            fs:SetText(text or "")
+            fs:SetJustifyH(justify or "LEFT")
+            local c = color or C.bookInk
+            fs:SetTextColor(c[1], c[2], c[3])
+            if fs.SetWordWrap then fs:SetWordWrap(false) end
+        end
+        cell("pairL", headers[1], 2, labelW, C.bookHead)
+        cell("pairR", headers[2], 2 + labelW, valW, C.bookHead, "RIGHT")
+        cell("pairR", headers[3], 2 + labelW + valW, valW, C.bookHead, "RIGHT")
+        y = y + rowH
+        for _, row in ipairs(rows) do
+            local a, b = tonumber(row[4] or row[2]), tonumber(row[5] or row[3])
+            local ca = (a and b and a > b) and C.bookGreen or C.bookInk
+            local cbb = (a and b and b > a) and C.bookGreen or C.bookInk
+            cell("pairL", row[1], 2, labelW)
+            cell("pairR", row[2], 2 + labelW, valW, ca, "RIGHT")
+            cell("pairR", row[3], 2 + labelW + valW, valW, cbb, "RIGHT")
+            local d = Take("dots")
+            d:SetWidth(width)
+            d:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -(y + rowH - 2))
+            y = y + rowH
+        end
+        self.y = y
+    end
+
     function doc:End(scrollTop)
         area:SetContentHeight(self.y + 12)
         if scrollTop then area:ScrollToTop() end
     end
     return doc
+end
+
+---------------------------------------------------------------------------
+-- ChannelMenu (v0.5.0): a small popup above a button listing chat channels
+-- (Say / Party / Guild); unavailable ones are disabled. onPick(key) runs
+-- inside the click, so Say keeps its hardware event.
+---------------------------------------------------------------------------
+local channelMenu
+function Widgets.ShowChannelMenu(anchor, channels, onPick)
+    if not channelMenu then
+        local m = CreateFrame("Frame", "ChroniclesOfAzerothChannelMenu", UIParent)
+        m:SetFrameStrata("FULLSCREEN_DIALOG")
+        m:SetClampedToScreen(true)
+        m:EnableMouse(true)
+        if not Theme.ApplyBackdrop(m, { 0.03, 0.03, 0.03, 0.95 }, C.gold) then
+            local bg = Theme.SolidTexture(m, "BACKGROUND", { 0.03, 0.03, 0.03, 0.95 })
+            bg:SetAllPoints()
+            Theme.Border(m, C.gold)
+        end
+        m.title = Theme.Text(m, 11, C.inkMuted)
+        m.title:SetPoint("TOPLEFT", 10, -8)
+        m.title:SetText("Brag to...")
+        m.buttons = {}
+        m:Hide()
+        if UISpecialFrames then table.insert(UISpecialFrames, m:GetName()) end
+        channelMenu = m
+    end
+    local m = channelMenu
+    if m:IsShown() and m.anchor == anchor then m:Hide() return end
+    m.anchor = anchor
+    for i, ch in ipairs(channels) do
+        local b = m.buttons[i]
+        if not b then
+            b = Widgets.Button(m, "", 120, 22)
+            b:SetPoint("TOPLEFT", 10, -26 - (i - 1) * 26)
+            m.buttons[i] = b
+        end
+        b:SetText(ch.label)
+        if ch.enabled == false then b:Disable() else b:Enable() end
+        b:SetScript("OnClick", function()
+            m:Hide()
+            onPick(ch.key)
+        end)
+        b:Show()
+    end
+    for i = #channels + 1, #m.buttons do m.buttons[i]:Hide() end
+    m:SetSize(140, 34 + #channels * 26)
+    m:ClearAllPoints()
+    m:SetPoint("BOTTOM", anchor, "TOP", 0, 4)
+    m:Show()
+end
+
+function Widgets.HideChannelMenu()
+    if channelMenu then channelMenu:Hide() end
+end
+
+---------------------------------------------------------------------------
+-- Check (v0.5.0): Blizzard's check box (UICheckButtonTemplate) with an ink
+-- label, for settings on the parchment.
+---------------------------------------------------------------------------
+function Widgets.Check(parent, label, onToggle)
+    local cb, native = Theme.TryCreate("CheckButton", nil, parent, "UICheckButtonTemplate")
+    cb:SetSize(24, 24)
+    if not native then
+        local box = Theme.SolidTexture(cb, "BACKGROUND", { 0, 0, 0, 0.6 })
+        box:SetAllPoints()
+        Theme.Border(cb, C.bookHead)
+        local tick = Theme.SolidTexture(cb, "ARTWORK", C.bookGreen)
+        tick:SetPoint("TOPLEFT", 5, -5); tick:SetPoint("BOTTOMRIGHT", -5, 5)
+        cb.tick = tick
+        local checked = false
+        function cb:SetChecked(v) checked = v and true or false; tick:SetShown(checked) end
+        function cb:GetChecked() return checked end
+        cb:SetScript("OnClick", function(self) self:SetChecked(not checked); if onToggle then onToggle(checked) end end)
+    else
+        cb:SetScript("OnClick", function(self) if onToggle then onToggle(self:GetChecked() and true or false) end end)
+    end
+    if cb.Text then cb.Text:SetText("") end
+    cb.label = Theme.Ink(parent, 13, C.bookInk)
+    cb.label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
+    cb.label:SetText(label)
+    return cb
 end

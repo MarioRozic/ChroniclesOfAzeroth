@@ -126,6 +126,12 @@ local function Create(parent)
         self.lastKey = sel and sel.key
 
         CoA.UI:SetFooter({
+            { text = "Brag", disabled = not (sel and sel.unlocked),
+              tooltip = (sel and sel.unlocked) and "Post this milestone to Say, Party or Guild chat." or "Earn this milestone first.",
+              onClick = function(btn)
+                  local def = sel.def
+                  CoA.UI:OpenBrag(btn, function() return CoA.Share:MilestoneLine(def) end)
+              end },
             { text = "Change Title", onClick = CycleTitle, disabled = #titles == 0,
               tooltip = #titles == 0 and "Earn a milestone with a title reward first." or "Wear the next title you have earned." },
         })

@@ -4,7 +4,7 @@ An RPG companion for **World of Warcraft: Forever**: a travel journal, a charact
 profile and a chronicle of everything you really did on your journey. It never
 plays the game for you and never invents events.
 
-Version 0.4.0 (Phase 3 plus the Quest Log book redesign).
+Version 0.5.0 (sharing: announcements, Brag and Fellows).
 
 ## Client compatibility
 
@@ -58,6 +58,23 @@ Only deeds the addon can observe reliably are used. "Courtesy of the Road" needs
 player targeted when you `/wave`.
 
 Notifications never appear during combat: they wait until combat ends.
+
+## Sharing
+
+- **Announcements** (off by default): turn them on in Fellows > Sharing, or with
+  `/coa announce guild on` / `/coa announce party on`. Milestones earned close
+  together share one line; at most one line a minute and five an hour per channel;
+  nothing during combat or a boss fight; never for milestones recorded quietly at login.
+- **Brag**: the Brag button on the Character page (your journey) and on an earned
+  milestone posts one line to Say, Party or Guild, picked from a small menu.
+  `/coa brag guild` does the same from chat.
+- **Fellows**: target a player who also uses the addon and press Inspect Target
+  (or `/coa inspect`, or "View Chronicle" in the player's right-click menu). Their
+  title, totals and milestones are compared with yours. It uses hidden whispered
+  addon messages (`C_ChatInfo.SendAddonMessage`, prefix `CoAChron`), cut into
+  240-byte pieces, paced and retried when throttled, and never sent in combat or
+  an encounter. You can turn inspecting off under Fellows > Sharing; your journal
+  and location are never shared.
 
 ## What it records
 

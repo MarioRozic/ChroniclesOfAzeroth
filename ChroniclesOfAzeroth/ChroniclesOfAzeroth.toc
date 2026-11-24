@@ -2,7 +2,7 @@
 ## Title: |cffd4af37Chronicles of Azeroth|r
 ## Notes: An RPG journal, character profile and adventure chronicle for your journey through Azeroth.
 ## Author: Mara
-## Version: 0.4.0
+## Version: 0.5.0
 ## SavedVariables: ChroniclesOfAzerothDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## AddonCompartmentFunc: ChroniclesOfAzeroth_OnAddonCompartmentClick
@@ -35,6 +35,9 @@ Modules\Achievements.lua
 Data\Challenges.lua
 Modules\Challenges.lua
 
+# --- Sharing ------------------------------------------------------------------
+Modules\Share.lua
+
 # --- User interface ----------------------------------------------------------
 UI\Theme.lua
 UI\Widgets.lua
@@ -45,6 +48,7 @@ UI\Pages\Achievements.lua
 UI\Pages\Exploration.lua
 UI\Pages\EventHistory.lua
 UI\Pages\Challenges.lua
+UI\Pages\Fellows.lua
 UI\Toast.lua
 UI\MinimapButton.lua
 

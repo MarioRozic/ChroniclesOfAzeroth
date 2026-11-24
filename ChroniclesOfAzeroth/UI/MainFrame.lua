@@ -28,7 +28,7 @@ CoA.UI = UI
 UI.pages = {}
 UI.pageOrder = {}
 
-local MIN_W, MIN_H, MAX_W, MAX_H = 700, 480, 1600, 1100
+local MIN_W, MIN_H, MAX_W, MAX_H = 780, 480, 1600, 1100
 local LEFT_W, FOOTER_H = 310, 34
 local DEFAULT_W, DEFAULT_H = 820, 580
 
@@ -340,6 +340,7 @@ end
 function UI:SetFooter(buttons)
     local f = self.frame
     if not f then return end
+    if Widgets.HideChannelMenu then Widgets.HideChannelMenu() end
     buttons = buttons or {}
     for i, b in ipairs(f.footer) do
         local def = buttons[i]
@@ -369,6 +370,19 @@ function UI:PageAreas(page)
     R:SetPoint("TOPLEFT", f.rightPage, "TOPLEFT", 22, -14)
     R:SetPoint("BOTTOMRIGHT", f.rightPage, "BOTTOMRIGHT", -8, 10)
     return L, R
+end
+
+-- Brag: opens the channel menu above `anchor`; getText() builds the line.
+function UI:OpenBrag(anchor, getText)
+    local Compat = CoA.Compat
+    local channels = {}
+    for _, ch in ipairs(CoA.Share.BRAG_CHANNELS) do
+        local usable = ch.key == "PARTY" and Compat.GroupChannel() ~= nil or Compat.CanUseChannel(ch.key)
+        channels[#channels + 1] = { key = ch.key, label = ch.label, enabled = usable }
+    end
+    Widgets.ShowChannelMenu(anchor, channels, function(key)
+        CoA.Share:Brag(getText(), key)
+    end)
 end
 
 function UI:RefreshCurrent()

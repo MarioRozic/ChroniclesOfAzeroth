@@ -106,6 +106,10 @@ local function Render(page)
         end
     end
     r:End()
+    CoA.UI:SetFooter({
+        { text = "Brag", tooltip = "Post a summary of your journey to Say, Party or Guild chat.",
+          onClick = function(btn) CoA.UI:OpenBrag(btn, function() return CoA.Share:ProfileLine() end) end },
+    })
 end
 
 CoA.UI:RegisterPage("overview", {

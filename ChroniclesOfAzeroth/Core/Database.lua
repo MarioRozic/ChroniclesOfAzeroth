@@ -39,6 +39,13 @@ local SETTINGS_DEFAULTS = {
         lastTab = "overview",
     },
     minimap = { hide = false, angle = 200 },
+    -- Sharing (v0.5.0). Announcements are off until the player turns them on.
+    share = {
+        announceGuild = false,     -- post newly earned milestones to guild chat
+        announceParty = false,     -- ... and to party / instance chat
+        allowInspect = true,       -- answer other Chronicles' inspect requests
+        bragChannel = "PARTY",     -- last channel picked for Brag
+    },
 }
 
 local CHAR_DEFAULTS = {

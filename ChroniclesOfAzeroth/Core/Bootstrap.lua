@@ -48,6 +48,7 @@ local PAGES = {
     journal = "journal", achievements = "achievements", milestones = "achievements",
     challenges = "challenges", exploration = "exploration", explore = "exploration",
     history = "history", feed = "history", events = "history",
+    fellows = "fellows", sharing = "fellows",
 }
 
 local function PrintHelp()
@@ -61,6 +62,9 @@ local function PrintHelp()
         "/coa milestones - open the Milestones chapter",
         "/coa toast - preview a milestone notification",
         "/coa sound on|off - notification sounds",
+        "/coa brag say|party|guild - post a summary of your journey",
+        "/coa inspect - read your target's chronicle (they need the addon too)",
+        "/coa announce guild|party on|off - announce new milestones",
         "/coa status - client and data diagnostics",
         "/coa reset confirm - erase this character's chronicle",
     }
@@ -83,6 +87,10 @@ local function PrintStatus()
         CoA:Print(string.format("challenges: %d under way, %d completed; emote hook %s",
             CoA.Challenges:CountActive(), CoA.Challenges:CountCompleted(),
             CoA.Challenges.hooked and "active" or "unavailable"))
+        CoA:Print(string.format("sharing: addon messages %s; announce guild %s, party %s; inspect %s",
+            CoA.Share.prefixOK and "available" or "unavailable",
+            CoA.db.settings.share.announceGuild and "on" or "off", CoA.db.settings.share.announceParty and "on" or "off",
+            CoA.db.settings.share.allowInspect and "allowed" or "private"))
         local run = CoA.Combat:GetRun()
         CoA:Print("kill sources: PARTY_KILL" .. (CoA.unsupportedEvents.PARTY_KILL and " (missing)" or "") ..
             ", UNIT_DIED" .. (CoA.unsupportedEvents.UNIT_DIED and " (missing, using target fallback)" or "") ..
@@ -121,6 +129,26 @@ local function HandleSlash(msg)
     elseif cmd == "sound" or cmd == "sounds" then
         CoA.db.settings.playSounds = rest ~= "off"
         CoA:Print("notification sounds", CoA.db.settings.playSounds and "on" or "off")
+    elseif cmd == "brag" then
+        local ch = string.upper(rest ~= "" and rest or CoA.db.settings.share.bragChannel)
+        CoA.Share:Brag(CoA.Share:ProfileLine(), ch)
+    elseif cmd == "inspect" then
+        local ok, why = CoA.Share:InspectTarget()
+        if ok then
+            CoA.UI:Show("fellows")
+            CoA.UI:SelectFellow(CoA.Compat.UnitFullName("target"))
+        else
+            CoA:Print(why)
+        end
+    elseif cmd == "announce" then
+        local which, state = string.match(rest, "^(%a+)%s*(%a*)$")
+        local key = which == "guild" and "announceGuild" or (which == "party" and "announceParty")
+        if key then
+            CoA.db.settings.share[key] = state ~= "off"
+            CoA:Print("milestone announcements in " .. which .. " chat", CoA.db.settings.share[key] and "on" or "off")
+        else
+            CoA:Print("usage: /coa announce guild on")
+        end
     elseif cmd == "scale" then
         local s = tonumber(rest)
         if s then CoA.UI:SetScale(s) else CoA:Print("usage: /coa scale 0.9") end

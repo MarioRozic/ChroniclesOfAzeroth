@@ -312,3 +312,76 @@ function Compat.GetInstanceEncounters()
     if #list == 0 then return nil end
     return list
 end
+
+---------------------------------------------------------------------------
+-- Chat and addon messages (v0.5.0)
+---------------------------------------------------------------------------
+-- 11.2+ moved SendChatMessage into C_ChatInfo; older names stay as fallback.
+function Compat.SendChat(msg, chatType, target)
+    local fn = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+    if not fn then return false end
+    return pcall(fn, msg, chatType, nil, target)
+end
+
+-- Whether a chat channel can be used right now.
+function Compat.CanUseChannel(chatType)
+    if chatType == "GUILD" then return IsInGuild and IsInGuild() and true or false end
+    if chatType == "PARTY" then return IsInGroup and IsInGroup() and true or false end
+    if chatType == "INSTANCE_CHAT" then
+        return IsInGroup and LE_PARTY_CATEGORY_INSTANCE and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) and true or false
+    end
+    if chatType == "SAY" then return true end
+    return false
+end
+
+-- Party chat inside a dungeon-finder group goes to INSTANCE_CHAT.
+function Compat.GroupChannel()
+    if Compat.CanUseChannel("INSTANCE_CHAT") then return "INSTANCE_CHAT" end
+    if Compat.CanUseChannel("PARTY") then return "PARTY" end
+end
+
+function Compat.RegisterAddonPrefix(prefix)
+    local fn = (C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix) or RegisterAddonMessagePrefix
+    if not fn then return false end
+    local ok, result = pcall(fn, prefix)
+    return ok and result ~= false
+end
+
+-- Returns the client's result code (Enum.SendAddonMessageResult: 0 is
+-- success, 3 is throttled, 11 is the 12.0 encounter lockdown), or nil if
+-- the client has no addon-message API.
+function Compat.SendAddon(prefix, msg, chatType, target)
+    local fn = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
+    if not fn then return nil end
+    local ok, result = pcall(fn, prefix, msg, chatType, target)
+    if not ok then return 9 end
+    if result == nil or result == true then return 0 end
+    if result == false then return 9 end
+    return tonumber(result) or 0
+end
+
+function Compat.EncounterInProgress()
+    return IsEncounterInProgress and Safe(IsEncounterInProgress()) and true or false
+end
+
+-- "Name-Realm" for a unit, suitable as a whisper target.
+function Compat.UnitFullName(unit)
+    if GetUnitName then
+        local n = Safe(GetUnitName(unit, true))
+        if n and n ~= "" then return n end
+    end
+    local name, realm = UnitName(unit)
+    name, realm = Safe(name), Safe(realm)
+    if not name then return nil end
+    if realm and realm ~= "" then return name .. "-" .. realm end
+    return name
+end
+
+function Compat.ShortName(full)
+    if not full then return "?" end
+    if Ambiguate then
+        local ok, s = pcall(Ambiguate, full, "short")
+        if ok and s then return s end
+    end
+    return (full:match("^[^-]+")) or full
+end
