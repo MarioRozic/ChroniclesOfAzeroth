@@ -3,8 +3,12 @@ local ADDON_DIR = arg[1]
 local strict = {}
 -- Generic widget object: records calls, returns sensible defaults.
 local W = {}
+-- Template child regions: nil unless a template created them (as in the client).
+local CHILD_FIELDS = { CloseButton=1, Inset=1, TitleContainer=1, PortraitContainer=1, NineSlice=1,
+  TitleText=1, Instructions=1, Text=1, Left=1, Right=1, Middle=1, Bg=1, portrait=1, clearButton=1 }
 W.__index = function(t, k)
   local v = rawget(W, k); if v then return v end
+  if CHILD_FIELDS[k] or not k:match("^%u") then return nil end   -- data fields are nil until set
   return function() end   -- any unknown method is a no-op
 end
 local frames = {}
@@ -48,7 +52,27 @@ function W:SetScrollChild(c) self._child = c end
 function W:SetGradient() end
 function W:GetName() return "ChroniclesOfAzerothFrame" end
 
-_G.CreateFrame = function(kind, name, parent) return newObj(kind, name, parent) end
+-- MOCK_NATIVE = true makes Blizzard templates "exist" and build their children;
+-- otherwise every template is missing, so the addon's fallbacks are exercised.
+MOCK_TEMPLATES_USED = {}
+_G.CreateFrame = function(kind, name, parent, template)
+  if template and template ~= "BackdropTemplate" then
+    MOCK_TEMPLATES_USED[template] = true
+    if not MOCK_NATIVE then error("Couldn't find inherited node \"" .. template .. "\"") end
+  end
+  local o = newObj(kind, name, parent)
+  o._template = template
+  if MOCK_NATIVE and template == "ButtonFrameTemplate" then
+    o.CloseButton = newObj("Button"); o.Inset = newObj("Frame")
+    o.TitleContainer = newObj("Frame"); o.TitleContainer.TitleText = newObj("FontString")
+    o.PortraitContainer = newObj("Frame"); o.PortraitContainer.portrait = newObj("Texture")
+  elseif MOCK_NATIVE and template == "SearchBoxTemplate" then
+    o.Instructions = newObj("FontString")
+  elseif MOCK_NATIVE and template == "PanelTabButtonTemplate" then
+    o.Text = newObj("FontString")
+  end
+  return o
+end
 UIParent = newObj("Frame"); Minimap = newObj("Frame")
 DEFAULT_CHAT_FRAME = { AddMessage = function(_, m) print("[chat] " .. m) end }
 GameTooltip = newObj("GameTooltip")
@@ -94,7 +118,7 @@ SECRET = {}
 local function U(unit) return UNITS[unit] end
 UnitExists = function(u) return U(u) ~= nil or u == "player" end
 UnitGUID = function(u) if u == "player" then return "Player-1-0001" end local x = U(u) return x and x.guid end
-UnitIsPlayer = function(u) return u == "player" end
+UnitIsPlayer = function(u) if u == "player" then return true end local x = U(u) return x and x.player or false end
 UnitCanAttack = function(a, u) local x = U(u) return x and not x.friendly end
 UnitClassification = function(u) local x = U(u) return x and x.class or "normal" end
 UnitCreatureType = function(u) local x = U(u) return x and x.ctype end
@@ -113,6 +137,14 @@ GetTime = function() return STATE.gt end
 date = os.date; local realTime = os.time
 time = function(t) if t then return realTime(t) end return STATE.now end
 GetMaxLevelForPlayerExpansion = function() return 60 end
+IsInGroup = function() return STATE.group and true or false end
+DoEmote = function(token, target) EMOTES_DONE = (EMOTES_DONE or 0) + 1 end
+hooksecurefunc = function(a, b, c)
+  local t, name, fn = _G, a, b
+  if type(a) == "table" then t, name, fn = a, b, c end
+  local orig = t[name]
+  t[name] = function(...) local r = { orig(...) }; fn(...); return unpack(r) end
+end
 
 -- Load the addon in .toc order
 local ns = {}

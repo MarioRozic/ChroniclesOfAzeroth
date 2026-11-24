@@ -158,8 +158,10 @@ function Combat:Credit(guid, info)
     local zrec = zone ~= "" and char.exploration.zones[zone]
     if zrec then zrec.kills = (zrec.kills or 0) + 1 end
 
+    local newType = false
     if info then
         if info.creatureType then
+            newType = (c.creatureTypes[info.creatureType] or 0) == 0
             c.creatureTypes[info.creatureType] = (c.creatureTypes[info.creatureType] or 0) + 1
         end
         local class = info.classification
@@ -177,6 +179,10 @@ function Combat:Credit(guid, info)
         end
     end
     CoA:Fire("STATS_CHANGED", "kill")
+    CoA:Fire("DEED", "kill", {
+        name = info and info.name, classification = info and info.classification,
+        creatureType = info and info.creatureType, newType = newType,
+    })
 end
 
 ---------------------------------------------------------------------------
@@ -192,6 +198,7 @@ function Combat:SeeRare(info)
         CoA.char.stats.raresSeen = CoA.char.stats.raresSeen + 1
         CoA.Feed:Add("rare_seen", { name = info.name, elite = r.elite })
         CoA:Fire("STATS_CHANGED", "rare")
+        CoA:Fire("DEED", "rare_seen", { name = info.name })
     end
     return r
 end
@@ -248,6 +255,7 @@ function Combat:OnEncounterEnd(_, encounterID, encounterName, _, _, success)
         self:CheckRunComplete(encounterName, Compat.Safe(encounterID))
     end
     CoA:Fire("STATS_CHANGED", "boss")
+    CoA:Fire("DEED", "boss", { name = encounterName })
 end
 
 function Combat:CheckRunComplete(lastName, lastID)
@@ -283,6 +291,7 @@ function Combat:CompleteRun(how)
     char.combat.dungeons[run.name] = d
     CoA.Feed:Add("dungeon_completed", { instance = run.name, duration = duration, deaths = run.deaths, how = how })
     CoA:Fire("STATS_CHANGED", "dungeon")
+    CoA:Fire("DEED", "dungeon", { name = run.name, deaths = run.deaths })
 end
 
 ---------------------------------------------------------------------------

@@ -39,6 +39,7 @@ function Achievements:OnEnterWorld(isFirstOfSession)
         caughtUp = true
         if n > 0 and CoA.Toast then
             CoA.Toast:Show({
+                kind = "summary",
                 name = n == 1 and "1 milestone recorded" or (n .. " milestones recorded"),
                 desc = "Earned by deeds already in your chronicle. See the Milestones chapter.",
                 icon = "Interface\\Icons\\Spell_Holy_ChampionsBond",

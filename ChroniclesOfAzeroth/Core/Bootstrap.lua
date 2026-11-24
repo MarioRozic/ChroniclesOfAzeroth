@@ -54,12 +54,13 @@ local function PrintHelp()
     CoA:Print("commands:")
     local lines = {
         "/coa - open or close the chronicle",
-        "/coa journal | profile | history | exploration - open a chapter",
+        "/coa journal | profile | challenges | history | exploration - open a chapter",
         "/coa scale <0.6-1.5> - window scale",
         "/coa resetpos - reset window position and size",
         "/coa minimap on|off - show or hide the minimap button",
         "/coa milestones - open the Milestones chapter",
         "/coa toast - preview a milestone notification",
+        "/coa sound on|off - notification sounds",
         "/coa status - client and data diagnostics",
         "/coa reset confirm - erase this character's chronicle",
     }
@@ -79,6 +80,9 @@ local function PrintStatus()
     if s then
         CoA:Print(string.format("kills %d, elites %d, rares %d/%d, bosses %d, dungeons %d, hidden places %d",
             s.kills, s.eliteKills, s.rareKills, s.raresSeen, s.bossesDefeated, s.dungeonsCompleted, s.areasDiscovered))
+        CoA:Print(string.format("challenges: %d under way, %d completed; emote hook %s",
+            CoA.Challenges:CountActive(), CoA.Challenges:CountCompleted(),
+            CoA.Challenges.hooked and "active" or "unavailable"))
         local run = CoA.Combat:GetRun()
         CoA:Print("kill sources: PARTY_KILL" .. (CoA.unsupportedEvents.PARTY_KILL and " (missing)" or "") ..
             ", UNIT_DIED" .. (CoA.unsupportedEvents.UNIT_DIED and " (missing, using target fallback)" or "") ..
@@ -114,6 +118,9 @@ local function HandleSlash(msg)
         CoA.Toast:Preview()
     elseif cmd == "milestones" or cmd == "achievements" then
         CoA.UI:Show("achievements")
+    elseif cmd == "sound" or cmd == "sounds" then
+        CoA.db.settings.playSounds = rest ~= "off"
+        CoA:Print("notification sounds", CoA.db.settings.playSounds and "on" or "off")
     elseif cmd == "scale" then
         local s = tonumber(rest)
         if s then CoA.UI:SetScale(s) else CoA:Print("usage: /coa scale 0.9") end

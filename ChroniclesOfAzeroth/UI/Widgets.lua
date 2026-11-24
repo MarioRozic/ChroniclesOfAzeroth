@@ -1,16 +1,18 @@
 --[[
   Chronicles of Azeroth - UI/Widgets.lua
 
-  Reusable, template-free widgets in the addon's visual style:
+  Reusable widgets in Blizzard's native style:
     Widgets.Button(parent, text, width, height)
     Widgets.ScrollArea(parent)          - scrollable content of any height
     Widgets.VirtualList(parent, rowHeight, createRow, updateRow)
                                         - fast list for thousands of rows
     Widgets.SearchBox(parent, width, onChanged)
     Widgets.Chip(parent, text)          - small toggle used for filters
+    Widgets.ProgressBar(parent, width, height)
 
-  No Blizzard XML templates are used, so the widgets do not depend on
-  template names that may differ between client versions.
+  Buttons and the search box use Blizzard templates (UIPanelButtonTemplate,
+  SearchBoxTemplate) through Theme.TryCreate, with a drawn fallback if a
+  template is ever missing.
 ]]
 
 local _, CoA = ...
@@ -20,46 +22,33 @@ local Widgets = {}
 CoA.Widgets = Widgets
 
 ---------------------------------------------------------------------------
--- Button
+---------------------------------------------------------------------------
+-- Button: Blizzard's red panel button (UIPanelButtonTemplate).
 ---------------------------------------------------------------------------
 function Widgets.Button(parent, text, width, height)
-    local b = CreateFrame("Button", nil, parent)
-    b:SetSize(width or 120, height or 24)
-    local bg = Theme.GradientTexture(b, "BACKGROUND", C.leatherLight, C.leather)
+    local b, native = Theme.TryCreate("Button", nil, parent, "UIPanelButtonTemplate")
+    b:SetSize(width or 120, height or 22)
+    if native then
+        b:SetText(text or "")
+        b.label = b:GetFontString()
+        return b
+    end
+    -- Fallback look
+    local bg = Theme.GradientTexture(b, "BACKGROUND", { 0.45, 0.05, 0.03, 1 }, { 0.25, 0.02, 0.01, 1 })
     bg:SetAllPoints()
     b.edges = Theme.Border(b, C.goldDim)
     local hl = Theme.SolidTexture(b, "HIGHLIGHT", C.highlight)
     hl:SetAllPoints()
-
-    local label = Theme.Text(b, 12, C.gold, Theme.FONT_HEADING)
+    local label = Theme.Text(b, 12, C.gold)
     label:SetPoint("CENTER", 0, 0)
     label:SetJustifyH("CENTER")
     label:SetJustifyV("MIDDLE")
     label:SetText(text or "")
     b.label = label
-
-    b:SetScript("OnEnter", function(self) Theme.SetBorderColor(self.edges, C.gold) end)
-    b:SetScript("OnLeave", function(self) Theme.SetBorderColor(self.edges, C.goldDim) end)
-    b:SetScript("OnMouseDown", function(self) self.label:SetPoint("CENTER", 1, -1) end)
-    b:SetScript("OnMouseUp", function(self) self.label:SetPoint("CENTER", 0, 0) end)
+    function b:SetText(t) self.label:SetText(t) end
     return b
 end
 
--- A flat icon button (close "x", etc.)
-function Widgets.IconButton(parent, size, glyph)
-    local b = CreateFrame("Button", nil, parent)
-    b:SetSize(size, size)
-    local label = Theme.Text(b, size - 4, C.goldDim, Theme.FONT_HEADING)
-    label:SetPoint("CENTER", 0, 1)
-    label:SetJustifyH("CENTER")
-    label:SetText(glyph)
-    b.label = label
-    b:SetScript("OnEnter", function(self) self.label:SetTextColor(C.gold[1], C.gold[2], C.gold[3]) end)
-    b:SetScript("OnLeave", function(self) self.label:SetTextColor(C.goldDim[1], C.goldDim[2], C.goldDim[3]) end)
-    return b
-end
-
----------------------------------------------------------------------------
 -- Thin vertical scrollbar (shared by ScrollArea and VirtualList)
 ---------------------------------------------------------------------------
 local function CreateScrollbar(parent, onScrollTo)
@@ -72,12 +61,12 @@ local function CreateScrollbar(parent, onScrollTo)
     thumb:SetWidth(6)
     thumb:SetPoint("TOP")
     thumb:EnableMouse(true)
-    local tex = Theme.SolidTexture(thumb, "ARTWORK", C.goldDim)
+    local tex = Theme.SolidTexture(thumb, "ARTWORK", { 0.45, 0.45, 0.45, 1 })
     tex:SetAllPoints()
     bar.thumb, bar.thumbTex = thumb, tex
 
-    thumb:SetScript("OnEnter", function() tex:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 1) end)
-    thumb:SetScript("OnLeave", function() tex:SetColorTexture(C.goldDim[1], C.goldDim[2], C.goldDim[3], 1) end)
+    thumb:SetScript("OnEnter", function() tex:SetColorTexture(0.75, 0.75, 0.75, 1) end)
+    thumb:SetScript("OnLeave", function() tex:SetColorTexture(0.45, 0.45, 0.45, 1) end)
 
     -- Dragging: convert cursor movement into a 0..1 fraction.
     thumb:SetScript("OnMouseDown", function(self)
@@ -236,30 +225,32 @@ function Widgets.VirtualList(parent, rowHeight, createRow, updateRow)
 end
 
 ---------------------------------------------------------------------------
--- Search box
+-- Search box: Blizzard's SearchBoxTemplate (magnifier, hint, clear button).
 ---------------------------------------------------------------------------
 function Widgets.SearchBox(parent, width, onChanged)
-    local box = CreateFrame("EditBox", nil, parent)
-    box:SetSize(width or 180, 22)
+    local box, native = Theme.TryCreate("EditBox", nil, parent, "SearchBoxTemplate")
+    box:SetSize(width or 180, 20)
     box:SetAutoFocus(false)
+    box:SetMaxLetters(60)
+    if native then
+        if box.Instructions then box.Instructions:SetText("Search the chronicle") end
+        box:HookScript("OnTextChanged", function(self)
+            if onChanged then onChanged(self:GetText() or "") end
+        end)
+        return box
+    end
     box:SetFont(Theme.FONT_BODY, 12, "")
     box:SetTextColor(C.ink[1], C.ink[2], C.ink[3])
     box:SetTextInsets(8, 8, 0, 0)
-    box:SetMaxLetters(60)
     local bg = Theme.SolidTexture(box, "BACKGROUND", C.inset)
     bg:SetAllPoints()
-    box.edges = Theme.Border(box, C.goldFaint)
-
+    box.edges = Theme.Border(box, C.goldDim)
     local hint = Theme.Text(box, 12, C.inkFaint)
     hint:SetPoint("LEFT", 8, 0)
     hint:SetJustifyV("MIDDLE")
-    hint:SetText("Search the chronicle...")
-    box.hint = hint
-
+    hint:SetText("Search the chronicle")
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     box:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    box:SetScript("OnEditFocusGained", function(self) Theme.SetBorderColor(self.edges, C.goldDim) end)
-    box:SetScript("OnEditFocusLost", function(self) Theme.SetBorderColor(self.edges, C.goldFaint) end)
     box:SetScript("OnTextChanged", function(self)
         local text = self:GetText() or ""
         hint:SetShown(text == "")
@@ -269,58 +260,51 @@ function Widgets.SearchBox(parent, width, onChanged)
 end
 
 ---------------------------------------------------------------------------
--- Chip: a small toggle used for category filters.
+-- Chip: a filter toggle, drawn as a small Blizzard panel button whose
+-- highlight stays lit while selected.
 ---------------------------------------------------------------------------
 function Widgets.Chip(parent, text)
-    local b = CreateFrame("Button", nil, parent)
-    b:SetHeight(22)
-    local label = Theme.Text(b, 12, C.inkMuted, Theme.FONT_HEADING)
-    label:SetPoint("CENTER")
-    label:SetJustifyH("CENTER")
-    label:SetText(text)
-    b:SetWidth(label:GetStringWidth() + 22)
-    b.label = label
-    local sel = Theme.SolidTexture(b, "BACKGROUND", C.selected)
-    sel:SetAllPoints()
-    sel:Hide()
-    b.sel = sel
-    b.edges = Theme.Border(b, C.goldFaint)
-    local hl = Theme.SolidTexture(b, "HIGHLIGHT", C.highlight)
-    hl:SetAllPoints()
-
+    local b = Widgets.Button(parent, text, 60, 22)
+    local fs = b.label or (b.GetFontString and b:GetFontString())
+    local w = fs and fs:GetStringWidth() or (#text * 7)
+    b:SetWidth(math.max(50, w + 24))
     function b:SetSelected(on)
         self.selected = on
-        self.sel:SetShown(on)
-        local c = on and C.gold or C.inkMuted
-        self.label:SetTextColor(c[1], c[2], c[3])
-        Theme.SetBorderColor(self.edges, on and C.goldDim or C.goldFaint)
+        if self.LockHighlight then
+            if on then self:LockHighlight() else self:UnlockHighlight() end
+        end
+        local label = self.label or (self.GetFontString and self:GetFontString())
+        if label then
+            local c = on and C.ink or C.gold
+            label:SetTextColor(c[1], c[2], c[3])
+        end
     end
     return b
 end
 
 ---------------------------------------------------------------------------
--- ProgressBar (Phase 2): thin gold bar with an optional "12 / 50" label.
+-- ProgressBar: Blizzard status bar (as in the achievement and reputation
+-- frames) with the "12 / 50" text on the bar.
 ---------------------------------------------------------------------------
 function Widgets.ProgressBar(parent, width, height)
-    local bar = CreateFrame("Frame", nil, parent)
-    bar:SetSize(width or 120, height or 8)
-    local bg = Theme.SolidTexture(bar, "BACKGROUND", C.inset)
+    local bar = CreateFrame("StatusBar", nil, parent)
+    bar:SetSize(width or 120, height or 14)
+    bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    bar:SetStatusBarColor(0.0, 0.6, 0.1)
+    bar:SetMinMaxValues(0, 1)
+    bar:SetValue(0)
+    local bg = Theme.SolidTexture(bar, "BACKGROUND", { 0, 0, 0, 0.6 })
     bg:SetAllPoints()
-    bar.edges = Theme.Border(bar, C.goldFaint)
-    local fill = Theme.HGradientTexture(bar, "ARTWORK", C.goldDim, C.gold)
-    fill:SetPoint("TOPLEFT", 1, -1)
-    fill:SetPoint("BOTTOMLEFT", 1, 1)
-    fill:SetWidth(1)
-    bar.fill = fill
-    bar.label = Theme.Text(bar, 10, C.inkMuted)
-    bar.label:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", 0, 3)
-    bar.label:SetJustifyH("RIGHT")
+    bar.edges = Theme.Border(bar, { 0.45, 0.45, 0.45, 1 }, -1, "OVERLAY")
+    bar.label = Theme.Text(bar, 10, C.ink)
+    bar.label:SetPoint("CENTER", 0, 0)
+    bar.label:SetJustifyH("CENTER")
+    bar.label:SetJustifyV("MIDDLE")
 
     function bar:SetProgress(current, max, text)
-        local frac = (max and max > 0) and math.max(0, math.min(1, current / max)) or 0
-        local w = math.max(1, (self:GetWidth() - 2) * frac)
-        self.fill:SetWidth(w)
-        self.fill:SetShown(frac > 0)
+        max = (max and max > 0) and max or 1
+        self:SetMinMaxValues(0, max)
+        self:SetValue(math.max(0, math.min(max, current or 0)))
         self.label:SetText(text or "")
     end
     return bar

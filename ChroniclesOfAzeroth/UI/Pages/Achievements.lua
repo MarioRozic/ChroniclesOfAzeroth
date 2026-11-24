@@ -22,7 +22,7 @@ local function CreateRow(parent)
 
     row.icon = Theme.Icon(row, 42)
     row.icon:SetPoint("LEFT", 12, 0)
-    row.name = Theme.Heading(row, 16)
+    row.name = Theme.Heading(row, 14)
     row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 12, -2)
     row.name:SetPoint("RIGHT", row, "RIGHT", -190, 0)
     if row.name.SetWordWrap then row.name:SetWordWrap(false) end
@@ -33,8 +33,8 @@ local function CreateRow(parent)
     row.reward = Theme.Text(row, 10, C.goldDim)
     row.reward:SetPoint("TOPLEFT", row.desc, "BOTTOMLEFT", 0, -3)
 
-    row.bar = Widgets.ProgressBar(row, 160, 8)
-    row.bar:SetPoint("RIGHT", row, "RIGHT", -12, -6)
+    row.bar = Widgets.ProgressBar(row, 170, 14)
+    row.bar:SetPoint("RIGHT", row, "RIGHT", -12, 0)
     row.date = Theme.Text(row, 12, C.gold, Theme.FONT_HEADING)
     row.date:SetPoint("TOPRIGHT", row, "TOPRIGHT", -12, -14)
     row.date:SetJustifyH("RIGHT")
@@ -87,9 +87,9 @@ local function Create(parent)
     local page = CreateFrame("Frame", nil, parent)
     page.category = "all"
 
-    page.summary = Theme.Heading(page, 18)
+    page.summary = Theme.Heading(page, 16)
     page.summary:SetPoint("TOPLEFT", 2, 0)
-    page.total = Widgets.ProgressBar(page, 220, 8)
+    page.total = Widgets.ProgressBar(page, 240, 14)
     page.total:SetPoint("TOPLEFT", page.summary, "BOTTOMLEFT", 0, -8)
 
     page.titleLabel = Theme.Text(page, 12, C.inkMuted)
@@ -116,7 +116,7 @@ local function Create(parent)
     for _, c in ipairs(CoA.AchievementData.CATEGORIES) do cats[#cats + 1] = c end
     for _, cat in ipairs(cats) do
         local chip = Widgets.Chip(page, cat.label)
-        if prev then chip:SetPoint("LEFT", prev, "RIGHT", 5, 0) else chip:SetPoint("TOPLEFT", 0, -44) end
+        if prev then chip:SetPoint("LEFT", prev, "RIGHT", 5, 0) else chip:SetPoint("TOPLEFT", 0, -50) end
         chip.key = cat.key
         chip:SetScript("OnClick", function() page.category = cat.key; page:Render() end)
         page.chips[#page.chips + 1] = chip
@@ -124,7 +124,7 @@ local function Create(parent)
     end
 
     page.list = Widgets.VirtualList(page, ROW_H, CreateRow, UpdateRow)
-    page.list:SetPoint("TOPLEFT", 0, -76)
+    page.list:SetPoint("TOPLEFT", 0, -82)
     page.list:SetPoint("BOTTOMRIGHT", 0, 0)
 
     function page:Render()
@@ -133,7 +133,7 @@ local function Create(parent)
 
         local earned, total = A:CountUnlocked()
         self.summary:SetText(string.format("%d of %d milestones earned", earned, total))
-        self.total:SetProgress(earned, total)
+        self.total:SetProgress(earned, total, earned .. " / " .. total)
 
         local titles = A:GetEarnedTitles()
         self.titleButton:SetShown(#titles > 0)

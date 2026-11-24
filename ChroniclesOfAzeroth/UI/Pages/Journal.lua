@@ -4,6 +4,10 @@
   The Adventure Journal: one diary chapter per day, newest first, written
   from what actually happened (see Modules/Journal.lua). Paged, 15 chapters
   at a time, so long chronicles stay light.
+
+  Since v0.3.0 the chapters are written on a parchment page, like a quest
+  text: Blizzard's parchment atlas where the client has it, a paper colour
+  otherwise, with dark ink and Morpheus chapter titles.
 ]]
 
 local _, CoA = ...
@@ -12,17 +16,25 @@ local C = Theme.C
 
 local PER_PAGE = 15
 
+-- Ink on paper: no drop shadow.
+local function Ink(fs)
+    fs:SetShadowOffset(0, 0)
+    fs:SetShadowColor(0, 0, 0, 0)
+    return fs
+end
+
 local function CreateChapterFrame(parent)
     local ch = CreateFrame("Frame", nil, parent)
-    ch.title = Theme.Heading(ch, 21)
+    ch.title = Ink(Theme.Text(ch, 20, C.paperHead, Theme.FONT_BOOK))
     ch.title:SetPoint("TOPLEFT", 0, 0)
-    ch.year = Theme.Text(ch, 11, C.inkFaint, Theme.FONT_HEADING)
+    ch.year = Ink(Theme.Text(ch, 11, C.paperFaint, Theme.FONT_BODY))
     ch.year:SetPoint("BOTTOMLEFT", ch.title, "BOTTOMRIGHT", 8, 2)
-    ch.rule = Theme.HGradientTexture(ch, "ARTWORK", C.goldFaint, { 0, 0, 0, 0 })
+    local faint = C.paperFaint
+    ch.rule = Theme.HGradientTexture(ch, "ARTWORK", { faint[1], faint[2], faint[3], 0.8 }, { faint[1], faint[2], faint[3], 0 })
     ch.rule:SetHeight(1)
     ch.rule:SetPoint("TOPLEFT", ch.title, "BOTTOMLEFT", 0, -5)
     ch.rule:SetPoint("RIGHT", ch, "RIGHT", 0, 0)
-    ch.body = Theme.Text(ch, 13, C.ink)
+    ch.body = Ink(Theme.Text(ch, 13, C.paperInk))
     ch.body:SetPoint("TOPLEFT", ch.rule, "BOTTOMLEFT", 0, -10)
     if ch.body.SetSpacing then ch.body:SetSpacing(4) end
     return ch
@@ -31,7 +43,7 @@ end
 local function Create(parent)
     local page = CreateFrame("Frame", nil, parent)
 
-    local intro = Theme.Text(page, 12, C.inkMuted, Theme.FONT_HEADING)
+    local intro = Theme.Text(page, 12, C.gold, Theme.FONT_HEADING)
     intro:SetPoint("TOPLEFT", 2, 0)
     intro:SetPoint("RIGHT", page, "RIGHT", -200, 0)
     intro:SetText("Written from your own deeds, one day at a time.")
@@ -47,13 +59,23 @@ local function Create(parent)
     page.prev:SetScript("OnClick", function() page.pageIndex = page.pageIndex - 1; page:Render(true) end)
     page.next:SetScript("OnClick", function() page.pageIndex = page.pageIndex + 1; page:Render(true) end)
 
-    local area = Widgets.ScrollArea(page)
-    area:SetPoint("TOPLEFT", 0, -32)
-    area:SetPoint("BOTTOMRIGHT", 0, 0)
+    -- Parchment page behind the chapters.
+    local paper = CreateFrame("Frame", nil, page)
+    paper:SetPoint("TOPLEFT", 0, -32)
+    paper:SetPoint("BOTTOMRIGHT", 0, 0)
+    local sheet = paper:CreateTexture(nil, "BACKGROUND")
+    sheet:SetAllPoints()
+    Theme.AtlasOrColor(sheet, "QuestBG-Parchment", C.paper)
+    Theme.Border(paper, { 0.36, 0.27, 0.15, 1 })
+    page.paper = paper
+
+    local area = Widgets.ScrollArea(paper)
+    area:SetPoint("TOPLEFT", 18, -14)
+    area:SetPoint("BOTTOMRIGHT", -6, 10)
     page.area = area
     page.chapters = {}
 
-    page.empty = Theme.Text(area.content, 13, C.inkFaint)
+    page.empty = Ink(Theme.Text(area.content, 13, C.paperFaint))
     page.empty:SetPoint("TOPLEFT", 4, -8)
     page.empty:SetWidth(520)
     page.empty:SetText("The pages are still blank. Travel, fight and help the people of Azeroth, and your journal will fill itself with what you have truly done.")

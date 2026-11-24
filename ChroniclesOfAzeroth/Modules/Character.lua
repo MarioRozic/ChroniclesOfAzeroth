@@ -78,6 +78,7 @@ function Character:OnLevelUp(_, newLevel)
             t = time(), zone = char.location.zone ~= "" and char.location.zone or nil,
         }
         CoA.Feed:Add("level_up", { level = newLevel }, { dedupe = "level" .. newLevel, window = 30 })
+        CoA:Fire("DEED", "level", { level = newLevel })
     end
     CoA:Fire("CHARACTER_UPDATED")
     CoA:Fire("STATS_CHANGED", "level")
@@ -117,8 +118,8 @@ function Character:GetTimePlayed()
     return p.timePlayedTotal, false
 end
 
--- Custom RPG title. Phase 3 will let unlocked achievements award titles;
--- until then the title follows the character's level.
+-- RPG title: a title earned from a milestone if one is worn (see
+-- Achievements:WearTitle), otherwise a title that follows the level.
 local LEVEL_TITLES = {
     { 60, "Champion of Azeroth" },
     { 50, "the Renowned" },

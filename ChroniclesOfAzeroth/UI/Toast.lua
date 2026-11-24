@@ -1,8 +1,9 @@
 --[[
-  Chronicles of Azeroth - UI/Toast.lua  (Phase 2; polished further in Phase 3)
+  Chronicles of Azeroth - UI/Toast.lua
 
-  A small RPG-style notification for unlocked milestones: icon, name, short
-  description and an optional sound, fading in and out.
+  A small notification in Blizzard's tooltip style for milestones and
+  completed challenges: icon, header, name, short description and an
+  optional sound. It glides down while fading in, then fades out.
 
   It is never shown during combat: unlocks earned mid-fight are queued and
   shown one by one after PLAYER_REGEN_ENABLED. The frame is a plain,
@@ -18,52 +19,65 @@ CoA.Toast = Toast
 local queue = {}
 local FADE_IN, HOLD, FADE_OUT = 0.4, 4.5, 0.9
 
+local HEADERS = {
+    milestone = "Milestone earned",
+    challenge = "Challenge completed",
+    summary   = "Chronicle updated",
+}
+local SLIDE = 18   -- pixels the toast glides down while fading in
+
 local function Create()
     local f = CreateFrame("Frame", "ChroniclesOfAzerothToast", UIParent)
-    f:SetSize(380, 78)
-    f:SetPoint("TOP", UIParent, "TOP", 0, -150)
+    f:SetSize(360, 72)
     f:SetFrameStrata("DIALOG")
     f:EnableMouse(false)
     f:Hide()
 
-    local bg = Theme.GradientTexture(f, "BACKGROUND", C.parchmentTop, C.leather)
-    bg:SetAllPoints()
-    Theme.Border(f, C.gold)
-    Theme.Border(f, C.goldFaint, 3)
-    for _, p in ipairs({ "LEFT", "RIGHT" }) do
-        local d = Theme.Diamond(f, 8)
-        d:SetPoint("CENTER", f, p, 0, 0)
+    -- Blizzard tooltip-style box (BackdropTemplate), with a plain fallback.
+    if not Theme.ApplyBackdrop(f, { 0.03, 0.03, 0.03, 0.92 }, C.gold) then
+        local bg = Theme.SolidTexture(f, "BACKGROUND", { 0.03, 0.03, 0.03, 0.92 })
+        bg:SetAllPoints()
+        Theme.Border(f, C.gold)
     end
+    local glow = Theme.GradientTexture(f, "BORDER", { 1, 0.82, 0, 0.12 }, { 1, 0.82, 0, 0 })
+    glow:SetPoint("TOPLEFT", 4, -4)
+    glow:SetPoint("TOPRIGHT", -4, -4)
+    glow:SetHeight(30)
 
-    f.icon = Theme.Icon(f, 50)
-    f.icon:SetPoint("LEFT", 14, 0)
+    f.icon = Theme.Icon(f, 46)
+    f.icon:SetPoint("LEFT", 13, 0)
     Theme.SetBorderColor(f.icon.edges, C.gold)
 
-    f.header = Theme.Text(f, 11, C.inkMuted, Theme.FONT_HEADING)
-    f.header:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", 12, 0)
-    f.header:SetText("Milestone earned")
-    f.name = Theme.Heading(f, 19)
-    f.name:SetPoint("TOPLEFT", f.header, "BOTTOMLEFT", 0, -2)
+    f.header = Theme.Text(f, 11, C.inkMuted)
+    f.header:SetPoint("TOPLEFT", f.icon, "TOPRIGHT", 12, -1)
+    f.name = Theme.Heading(f, 16)
+    f.name:SetPoint("TOPLEFT", f.header, "BOTTOMLEFT", 0, -3)
     f.name:SetPoint("RIGHT", f, "RIGHT", -14, 0)
     if f.name.SetWordWrap then f.name:SetWordWrap(false) end
     f.desc = Theme.Text(f, 11, C.ink)
-    f.desc:SetPoint("TOPLEFT", f.name, "BOTTOMLEFT", 0, -3)
+    f.desc:SetPoint("TOPLEFT", f.name, "BOTTOMLEFT", 0, -4)
     f.desc:SetPoint("RIGHT", f, "RIGHT", -14, 0)
     if f.desc.SetWordWrap then f.desc:SetWordWrap(false) end
 
     f:SetScript("OnUpdate", function(self, elapsed)
         self.elapsed = self.elapsed + elapsed
         local t = self.elapsed
+        local alpha, slide
         if t < FADE_IN then
-            self:SetAlpha(t / FADE_IN)
+            local p = t / FADE_IN
+            alpha, slide = p, (1 - p) * (1 - p) * SLIDE   -- ease out
         elseif t < FADE_IN + HOLD then
-            self:SetAlpha(1)
+            alpha, slide = 1, 0
         elseif t < FADE_IN + HOLD + FADE_OUT then
-            self:SetAlpha(1 - (t - FADE_IN - HOLD) / FADE_OUT)
+            alpha, slide = 1 - (t - FADE_IN - HOLD) / FADE_OUT, 0
         else
             self:Hide()
             Toast:Next()
+            return
         end
+        self:SetAlpha(alpha)
+        self:ClearAllPoints()
+        self:SetPoint("TOP", UIParent, "TOP", 0, -150 + slide)
     end)
     return f
 end
@@ -88,6 +102,7 @@ function Toast:Next()
     self.frame = self.frame or Create()
     local f = self.frame
     f.icon.icon:SetTexture(def.icon)
+    f.header:SetText(HEADERS[def.kind or "milestone"] or HEADERS.milestone)
     f.name:SetText(def.name)
     f.desc:SetText(def.title and (def.desc .. "  Title earned: " .. def.title) or def.desc)
     f.elapsed = 0

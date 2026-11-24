@@ -1,10 +1,14 @@
 --[[
   Chronicles of Azeroth - UI/MainFrame.lua
 
-  The main "tome" window: a leather-bound frame with a gold double border,
-  a title plate, chapter navigation on the left and a content page on the
-  right. Movable (drag the title), resizable (bottom-right grip), closes
-  with Escape, remembers its position, size and last chapter.
+  The main window, built like Blizzard's own panels (v0.3.0 redesign):
+    * ButtonFrameTemplate: stone frame, round player portrait, title bar,
+      the standard close button and an inset content area
+    * PanelTabButtonTemplate tabs along the bottom edge, as on the
+      character and spellbook windows
+  Movable (drag anywhere on the frame border/title), resizable (bottom-right
+  grip), closes with Escape or the X, remembers position, size and tab.
+  If a template is missing on the client, a plain fallback frame is drawn.
 
   Pages register themselves with UI:RegisterPage(key, def):
     def = { label, icon, order, create = function(parent) -> frame,
@@ -13,7 +17,7 @@
 ]]
 
 local _, CoA = ...
-local Theme, Widgets, Compat = CoA.Theme, CoA.Widgets, CoA.Compat
+local Theme, Compat = CoA.Theme, CoA.Compat
 local C = Theme.C
 
 local UI = {}
@@ -22,9 +26,8 @@ CoA.UI = UI
 UI.pages = {}
 UI.pageOrder = {}
 
-local NAV_WIDTH = 188
-local HEADER_HEIGHT = 62
-local MIN_W, MIN_H, MAX_W, MAX_H = 720, 480, 1600, 1100
+local MIN_W, MIN_H, MAX_W, MAX_H = 700, 480, 1600, 1100
+local DEFAULT_W, DEFAULT_H = 820, 580
 
 function UI:RegisterPage(key, def)
     def.key = key
@@ -36,69 +39,131 @@ end
 ---------------------------------------------------------------------------
 -- Frame construction
 ---------------------------------------------------------------------------
-local function CreateCornerOrnaments(frame)
-    local inset = 5
-    for _, p in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
-        local d = Theme.Diamond(frame, 9, C.gold, "OVERLAY")
-        local x = string.find(p, "LEFT") and inset or -inset
-        local y = string.find(p, "TOP") and -inset or inset
-        d:SetPoint("CENTER", frame, p, x, y)
+local function BuildFallbackChrome(f)
+    -- Drawn only if ButtonFrameTemplate is unavailable on this client.
+    local body = Theme.SolidTexture(f, "BACKGROUND", C.leather, -8)
+    body:SetAllPoints()
+    Theme.Border(f, C.goldDim, 0, "BORDER")
+    local title = Theme.Heading(f, 14)
+    title:SetPoint("TOP", 0, -6)
+    title:SetJustifyH("CENTER")
+    f.fallbackTitle = title
+    local close = CreateFrame("Button", nil, f)
+    close:SetSize(24, 24)
+    close:SetPoint("TOPRIGHT", -2, -2)
+    local x = Theme.Text(close, 16, C.gold)
+    x:SetPoint("CENTER")
+    x:SetText("x")
+    f.CloseButton = close
+    local inset = CreateFrame("Frame", nil, f)
+    inset:SetPoint("TOPLEFT", 8, -60)
+    inset:SetPoint("BOTTOMRIGHT", -8, 8)
+    Theme.Panel(inset, "inset")
+    f.Inset = inset
+    local portrait = f:CreateTexture(nil, "ARTWORK")
+    portrait:SetSize(50, 50)
+    portrait:SetPoint("TOPLEFT", 8, -6)
+    f.fallbackPortrait = portrait
+end
+
+local function SetWindowTitle(f, text)
+    if f.SetTitle then
+        pcall(f.SetTitle, f, text)
+    elseif f.TitleContainer and f.TitleContainer.TitleText then
+        f.TitleContainer.TitleText:SetText(text)
+    elseif f.TitleText then
+        f.TitleText:SetText(text)
+    elseif f.fallbackTitle then
+        f.fallbackTitle:SetText(text)
     end
 end
 
-local function CreateNavButton(parent, def)
-    local b = CreateFrame("Button", nil, parent)
-    b:SetHeight(40)
-
-    local sel = Theme.HGradientTexture(b, "BACKGROUND", C.selected, { C.gold[1], C.gold[2], C.gold[3], 0 })
-    sel:SetAllPoints()
-    sel:Hide()
-    b.sel = sel
-    local marker = Theme.SolidTexture(b, "ARTWORK", C.gold)
-    marker:SetPoint("TOPLEFT", 0, -6); marker:SetPoint("BOTTOMLEFT", 0, 6); marker:SetWidth(2)
-    marker:Hide()
-    b.marker = marker
-
-    local hl = Theme.HGradientTexture(b, "HIGHLIGHT", C.highlight, { C.gold[1], C.gold[2], C.gold[3], 0 })
-    hl:SetAllPoints()
-
-    local icon = Theme.Icon(b, 26, def.icon)
-    icon:SetPoint("LEFT", 12, 0)
-    b.iconFrame = icon
-
-    local label = Theme.Text(b, 15, C.inkMuted, Theme.FONT_HEADING)
-    label:SetPoint("LEFT", icon, "RIGHT", 10, 0)
-    label:SetJustifyV("MIDDLE")
-    label:SetText(def.label)
-    b.label = label
-
-    if def.badge then
-        local badge = Theme.Text(b, 9, C.inkFaint)
-        badge:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -1)
-        badge:SetText(def.badge)
+local function SetWindowPortrait(f)
+    if f.SetPortraitToUnit then
+        if pcall(f.SetPortraitToUnit, f, "player") then return end
     end
+    local tex = (f.PortraitContainer and f.PortraitContainer.portrait) or f.portrait or f.fallbackPortrait
+    if tex and SetPortraitTexture then SetPortraitTexture(tex, "player") end
+end
 
-    function b:SetSelected(on)
-        self.sel:SetShown(on)
-        self.marker:SetShown(on)
-        local c = on and C.gold or C.inkMuted
-        self.label:SetTextColor(c[1], c[2], c[3])
-        self.iconFrame.icon:SetDesaturated(not on)
-        if self.iconFrame.icon.SetVertexColor then
-            local v = on and 1 or 0.75
-            self.iconFrame.icon:SetVertexColor(v, v, v)
+local function CreateTabs(f)
+    f.tabs = {}
+    local name = f:GetName()
+    local prev
+    for i, def in ipairs(UI.pageOrder) do
+        local tab, native = Theme.TryCreate("Button", name .. "Tab" .. i, f, "PanelTabButtonTemplate")
+        tab:SetID(i)
+        tab.pageKey = def.key
+        if native then
+            tab:SetText(def.label)
+            if PanelTemplates_TabResize then pcall(PanelTemplates_TabResize, tab, 0) end
+        else
+            tab:SetSize(108, 28)
+            local bg = Theme.SolidTexture(tab, "BACKGROUND", C.leatherLight)
+            bg:SetAllPoints()
+            Theme.Border(tab, C.goldDim)
+            tab.fallbackLabel = Theme.Text(tab, 12, C.gold)
+            tab.fallbackLabel:SetPoint("CENTER")
+            tab.fallbackLabel:SetText(def.label)
+        end
+        if prev then
+            tab:SetPoint("LEFT", prev, "RIGHT", native and 3 or 4, 0)
+        else
+            tab:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 11, 2)
+        end
+        tab:SetScript("OnClick", function()
+            Compat.PlaySound("IG_CHARACTER_INFO_TAB", 841)
+            UI:ShowPage(def.key)
+        end)
+        f.tabs[i] = tab
+        prev = tab
+    end
+    f.numTabs = #f.tabs
+    f.Tabs = f.tabs
+    if PanelTemplates_SetNumTabs then pcall(PanelTemplates_SetNumTabs, f, #f.tabs) end
+end
+
+local function SelectTab(f, key)
+    for i, tab in ipairs(f.tabs) do
+        if tab.pageKey == key then
+            if PanelTemplates_SetTab and pcall(PanelTemplates_SetTab, f, i) then return end
+        end
+        if tab.fallbackLabel then
+            local c = tab.pageKey == key and C.ink or C.gold
+            tab.fallbackLabel:SetTextColor(c[1], c[2], c[3])
         end
     end
-    b:SetScript("OnClick", function() UI:ShowPage(def.key) end)
-    return b
+end
+
+-- Gentle fade when the window opens (Blizzard AnimationGroup API).
+local function AddOpenAnimation(f)
+    if not f.CreateAnimationGroup then return end
+    local ok, group = pcall(f.CreateAnimationGroup, f)
+    if not ok or not group then return end
+    local fade = group:CreateAnimation("Alpha")
+    fade:SetFromAlpha(0)
+    fade:SetToAlpha(1)
+    fade:SetDuration(0.15)
+    if fade.SetSmoothing then fade:SetSmoothing("OUT") end
+    f.openAnim = group
 end
 
 function UI:CreateMainFrame()
     if self.frame then return self.frame end
     local settings = CoA.db.settings.window
+    if settings.width < MIN_W or settings.height < MIN_H then
+        settings.width, settings.height = DEFAULT_W, DEFAULT_H
+    end
 
-    local f = CreateFrame("Frame", "ChroniclesOfAzerothFrame", UIParent)
+    local f, native = Theme.TryCreate("Frame", "ChroniclesOfAzerothFrame", UIParent, "ButtonFrameTemplate")
+    f.native = native
+    if native then
+        if ButtonFrameTemplate_HideButtonBar then pcall(ButtonFrameTemplate_HideButtonBar, f) end
+    else
+        BuildFallbackChrome(f)
+    end
     f:SetSize(settings.width, settings.height)
+    f:ClearAllPoints()
     f:SetPoint(settings.point, UIParent, settings.relPoint, settings.x, settings.y)
     f:SetScale(settings.scale or 1)
     f:SetFrameStrata("HIGH")
@@ -109,85 +174,49 @@ function UI:CreateMainFrame()
     Compat.SetResizeBounds(f, MIN_W, MIN_H, MAX_W, MAX_H)
     f:EnableMouse(true)
     f:Hide()
+    SetWindowTitle(f, "Chronicles of Azeroth")
 
-    -- Leather body + outer and inner gold rules (double border).
-    local body = Theme.SolidTexture(f, "BACKGROUND", C.leather, -8)
-    body:SetAllPoints()
-    local shade = Theme.GradientTexture(f, "BACKGROUND", { 0, 0, 0, 0 }, { 0, 0, 0, 0.35 }, -7)
-    shade:SetAllPoints()
-    Theme.Border(f, C.goldDim, 0, "BORDER")
-    Theme.Border(f, C.goldFaint, 4, "BORDER")
-    CreateCornerOrnaments(f)
+    -- Drag to move (title bar and frame border).
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    f:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        UI:SavePosition()
+    end)
+
+    -- Close button: the template's button calls HideUIPanel, which ignores
+    -- frames that are not registered UI panels - that was the v0.2.0 bug.
+    -- Bind it to our own Hide explicitly and keep it above the content.
+    if f.CloseButton then
+        f.CloseButton:SetScript("OnClick", function() UI:Hide() end)
+        f.CloseButton:SetFrameLevel(f:GetFrameLevel() + 20)
+    end
 
     -- Escape closes the window (standard, taint-free mechanism).
     if UISpecialFrames then table.insert(UISpecialFrames, f:GetName()) end
 
-    -- Header (drag handle) ------------------------------------------------
-    local header = CreateFrame("Frame", nil, f)
-    header:SetPoint("TOPLEFT", 8, -8)
-    header:SetPoint("TOPRIGHT", -8, -8)
-    header:SetHeight(HEADER_HEIGHT)
-    header:EnableMouse(true)
-    header:RegisterForDrag("LeftButton")
-    header:SetScript("OnDragStart", function() f:StartMoving() end)
-    header:SetScript("OnDragStop", function()
-        f:StopMovingOrSizing()
-        UI:SavePosition()
-    end)
-
-    local title = Theme.Heading(header, 26)
-    title:SetPoint("TOP", 0, -6)
-    title:SetJustifyH("CENTER")
-    title:SetText("Chronicles of Azeroth")
-
-    local subtitle = Theme.Text(header, 13, C.inkMuted, Theme.FONT_HEADING)
-    subtitle:SetPoint("TOP", title, "BOTTOM", 0, -2)
-    subtitle:SetJustifyH("CENTER")
+    -- Header line under the title bar, beside the portrait.
+    local subtitle = Theme.Text(f, 12, C.gold)
+    subtitle:SetPoint("TOPLEFT", f, "TOPLEFT", 66, -32)
+    subtitle:SetPoint("RIGHT", f, "RIGHT", -16, 0)
+    if subtitle.SetWordWrap then subtitle:SetWordWrap(false) end
     f.subtitle = subtitle
 
-    local divider = Theme.Divider(header, 420)
-    divider:SetPoint("BOTTOM", 0, 0)
-
-    local close = Widgets.IconButton(f, 22, "x")
-    close:SetPoint("TOPRIGHT", -14, -12)
-    close:SetScript("OnClick", function() UI:Hide() end)
-
-    -- Navigation (chapters) --------------------------------------------------
-    local nav = CreateFrame("Frame", nil, f)
-    nav:SetPoint("TOPLEFT", 12, -(HEADER_HEIGHT + 16))
-    nav:SetPoint("BOTTOMLEFT", 12, 12)
-    nav:SetWidth(NAV_WIDTH)
-    f.nav = nav
-
-    local navLine = Theme.SolidTexture(f, "BORDER", C.goldFaint)
-    navLine:SetPoint("TOPLEFT", nav, "TOPRIGHT", 6, 0)
-    navLine:SetPoint("BOTTOMLEFT", nav, "BOTTOMRIGHT", 6, 0)
-    navLine:SetWidth(1)
-
-    f.navButtons = {}
-    for i, def in ipairs(self.pageOrder) do
-        local b = CreateNavButton(nav, def)
-        b:SetPoint("TOPLEFT", 0, -(i - 1) * 44)
-        b:SetPoint("RIGHT", nav, "RIGHT", 0, 0)
-        f.navButtons[def.key] = b
-    end
-
-    local footer = Theme.Text(nav, 10, C.inkFaint)
-    footer:SetPoint("BOTTOMLEFT", 4, 2)
-    footer:SetPoint("BOTTOMRIGHT", -4, 2)
-    footer:SetText("v" .. CoA.version .. "  \194\183  /coa help")
-
-    -- Content host ----------------------------------------------------------
+    -- Content host inside the inset.
     local content = CreateFrame("Frame", nil, f)
-    content:SetPoint("TOPLEFT", nav, "TOPRIGHT", 20, 0)
-    content:SetPoint("BOTTOMRIGHT", -16, 16)
+    local inset = f.Inset or f
+    content:SetPoint("TOPLEFT", inset, "TOPLEFT", 10, -10)
+    content:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -8, 8)
     f.content = content
     f.pageFrames = {}
 
-    -- Resize grip -------------------------------------------------------------
+    CreateTabs(f)
+
+    -- Resize grip (Blizzard's chat size grabber art).
     local grip = CreateFrame("Button", nil, f)
     grip:SetSize(16, 16)
-    grip:SetPoint("BOTTOMRIGHT", -4, 4)
+    grip:SetPoint("BOTTOMRIGHT", -3, 3)
+    grip:SetFrameLevel(f:GetFrameLevel() + 20)
     grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
     grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
     grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
@@ -197,19 +226,24 @@ function UI:CreateMainFrame()
         UI:SavePosition()
     end)
 
-    f:SetScript("OnShow", function()
-        Compat.PlaySound("IG_SPELLBOOK_OPEN", 829)
+    AddOpenAnimation(f)
+
+    f:SetScript("OnShow", function(self)
+        Compat.PlaySound("IG_CHARACTER_INFO_OPEN", 839)
+        SetWindowPortrait(self)
+        if self.openAnim then self.openAnim:Play() end
         UI:RefreshHeader()
         UI:RefreshCurrent()
     end)
     f:SetScript("OnHide", function()
-        Compat.PlaySound("IG_SPELLBOOK_CLOSE", 830)
+        Compat.PlaySound("IG_CHARACTER_INFO_CLOSE", 840)
     end)
 
     -- Keep the open page live as the chronicle grows.
     CoA:On("FEED_ENTRY_ADDED", UI, function() if f:IsShown() then UI:RefreshCurrent() end end)
     CoA:On("CHARACTER_UPDATED", UI, function() if f:IsShown() then UI:RefreshHeader(); UI:RefreshCurrent() end end)
     CoA:On("LOCATION_CHANGED", UI, function() if f:IsShown() then UI:RefreshCurrent() end end)
+    CoA:On("CHALLENGES_CHANGED", UI, function() if f:IsShown() then UI:RefreshCurrent() end end)
 
     self.frame = f
     return f
@@ -226,7 +260,9 @@ end
 function UI:RefreshHeader()
     local m = CoA.char and CoA.char.meta
     if not (self.frame and m) then return end
-    self.frame.subtitle:SetText("The journey of " .. m.name .. ", " .. CoA.Character:GetTitle())
+    local level = CoA.char.progress.level or 1
+    self.frame.subtitle:SetText(string.format("%s, %s  %s|  Level %d %s %s|r", m.name, CoA.Character:GetTitle(),
+        Theme.Hex(C.ink), level, m.raceName, m.className))
 end
 
 ---------------------------------------------------------------------------
@@ -238,7 +274,7 @@ function UI:ShowPage(key)
     local def = self.pages[key]
 
     for k, frame in pairs(f.pageFrames) do frame:SetShown(k == key) end
-    for k, b in pairs(f.navButtons) do b:SetSelected(k == key) end
+    SelectTab(f, key)
 
     local page = f.pageFrames[key]
     if not page then
@@ -281,11 +317,11 @@ end
 function UI:ResetPosition()
     local s = CoA.db.settings.window
     s.point, s.relPoint, s.x, s.y = "CENTER", "CENTER", 0, 0
-    s.width, s.height, s.scale = 860, 600, 1
+    s.width, s.height, s.scale = DEFAULT_W, DEFAULT_H, 1
     if self.frame then
         self.frame:ClearAllPoints()
         self.frame:SetPoint("CENTER")
-        self.frame:SetSize(860, 600)
+        self.frame:SetSize(DEFAULT_W, DEFAULT_H)
         self.frame:SetScale(1)
     end
 end

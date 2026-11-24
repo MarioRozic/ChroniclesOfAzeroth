@@ -4,7 +4,7 @@ An RPG companion for **World of Warcraft: Forever**: a travel journal, a charact
 profile and a chronicle of everything you really did on your journey. It never
 plays the game for you and never invents events.
 
-Version 0.2.0 (Phase 2: exploration, progression and milestones).
+Version 0.3.0 (Phase 3: challenges, notifications and a Blizzard-native redesign).
 
 ## Client compatibility
 
@@ -32,7 +32,8 @@ Version 0.2.0 (Phase 2: exploration, progression and milestones).
 
 - `/coa` or `/chronicles` opens the tome. The minimap book icon and the addons
   compartment button by the minimap do the same (right-click opens Event History).
-- `/coa journal`, `/coa profile`, `/coa history`, `/coa exploration` open a chapter.
+- `/coa journal`, `/coa profile`, `/coa challenges`, `/coa history`, `/coa exploration` open a chapter.
+- `/coa sound on|off` turns notification sounds on or off.
 - `/coa scale 0.9`, `/coa resetpos`, `/coa minimap off|on`
 - `/coa milestones` opens the Milestones chapter; `/coa toast` previews a
   milestone notification.
@@ -40,8 +41,21 @@ Version 0.2.0 (Phase 2: exploration, progression and milestones).
   kill sources are active, and any event the client refused to register.
 - `/coa reset confirm` erases this character's chronicle.
 
-Drag the title to move the window, drag the bottom-right grip to resize it,
-press Escape to close it.
+The window uses Blizzard's own frame (portrait, title bar, close button, inset),
+bottom tabs, red panel buttons and search box. Drag the frame to move it, drag the
+bottom-right grip to resize it, and close it with the X or Escape.
+
+## Challenges
+
+Open the Challenges tab and press **Accept** on up to five challenges at once.
+Progress counts only from the moment you accept, completing one writes it into
+the chronicle and shows a notification, and every challenge can be taken again.
+Survivor fails if you die. There are 19 challenges in six groups (Exploration,
+Combat, Dungeons, Collection, Social, General), defined in `Data/Challenges.lua`.
+Only deeds the addon can observe reliably are used. "Courtesy of the Road" needs a
+player targeted when you `/wave`.
+
+Notifications never appear during combat: they wait until combat ends.
 
 ## What it records
 
@@ -60,6 +74,7 @@ press Escape to close it.
 | Bosses defeated | `ENCOUNTER_END` with success |
 | Dungeons completed | final Encounter Journal boss defeated, all bosses defeated, or `LFG_COMPLETION_REWARD` |
 | Milestones | 45 definitions in `Data/Achievements.lua`, judged only on the data above |
+| Challenges | the deeds above, plus `IsInGroup` for group challenges and a `hooksecurefunc` hook on `DoEmote` for /wave |
 
 Kills inside instances are not counted: Forever hides creature identity from
 addons there. Milestones earned from data recorded before they existed are
@@ -75,13 +90,14 @@ Core/      Init (namespace, modules, message bus), Util, Compat (all client API
            access), Database (SavedVariables, defaults, migrations), Events
            (single event frame), Bootstrap (startup + slash commands)
 Modules/   EventFeed (feed storage + entry kinds), Character, Tracker, Journal,
-           Combat (kills, rares, bosses, dungeon runs), Achievements
-Data/      Achievements (milestone definitions)
+           Combat (kills, rares, bosses, dungeon runs), Achievements, Challenges
+Data/      Achievements (milestones), Challenges (challenge definitions)
 UI/        Theme, Widgets, MainFrame, Toast, MinimapButton, Pages/*
 ```
 
 To add a feature: create a module with `CoA:NewModule("Name")`, register events
 with `CoA:RegisterEvent(event, module, "Method")`, record facts with
-`CoA.Feed:Add(kind, data)` after `CoA.Feed:RegisterKind(kind, {...})`, and add a
+`CoA.Feed:Add(kind, data)` after `CoA.Feed:RegisterKind(kind, {...})`, announce
+deeds for challenges with `CoA:Fire("DEED", kind, ctx)`, and add a
 page with `CoA.UI:RegisterPage(key, {...})`. Schema changes go in
 `Core/Database.lua` as a new `MIGRATIONS[n]` entry.

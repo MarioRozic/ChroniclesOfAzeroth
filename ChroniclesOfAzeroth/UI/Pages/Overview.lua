@@ -4,9 +4,8 @@
   The RPG character profile: portrait, identity, title, the length of the
   journey, statistics, current whereabouts and the latest chronicle entries.
 
-  Statistics that are not tracked yet (enemies defeated, achievements,
-  challenges) are shown as "not yet recorded" with the phase that adds them,
-  never as made-up numbers.
+  A value the client has not reported yet (time played) is shown as
+  "Unknown", never as a made-up number.
 ]]
 
 local _, CoA = ...
@@ -32,7 +31,7 @@ local function CreateTile(parent)
 
     t:EnableMouse(true)
     t:SetScript("OnEnter", function(self)
-        Theme.SetBorderColor(self.borderEdges, C.goldDim)
+        Theme.SetPanelHighlight(self, true)
         if self.tooltip and GameTooltip then
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             GameTooltip:AddLine(self.label:GetText() or "", C.gold[1], C.gold[2], C.gold[3])
@@ -41,7 +40,7 @@ local function CreateTile(parent)
         end
     end)
     t:SetScript("OnLeave", function(self)
-        Theme.SetBorderColor(self.borderEdges, C.goldFaint)
+        Theme.SetPanelHighlight(self, false)
         if GameTooltip then GameTooltip:Hide() end
     end)
     return t
@@ -60,9 +59,9 @@ local function SetTile(t, icon, value, label, tooltip, pending)
 end
 
 local function SectionTitle(parent, text)
-    local fs = Theme.Heading(parent, 17)
+    local fs = Theme.Heading(parent, 15)
     fs:SetText(text)
-    local line = Theme.HGradientTexture(parent, "ARTWORK", C.goldFaint, { 0, 0, 0, 0 })
+    local line = Theme.HGradientTexture(parent, "ARTWORK", { 0.6, 0.6, 0.6, 0.8 }, { 0.6, 0.6, 0.6, 0 })
     line:SetHeight(1)
     line:SetPoint("TOPLEFT", fs, "BOTTOMLEFT", 0, -4)
     line:SetPoint("RIGHT", parent, "RIGHT", 0, 0)
@@ -267,8 +266,10 @@ local function Refresh(page)
         "New areas revealed on your world map.")
     SetTile(T[14], "Interface\\Icons\\Spell_Holy_ChampionsBond", string.format("%d / %d", earned, totalMilestones), "Milestones earned",
         "Open the Milestones chapter to see them all.")
-    SetTile(T[15], "Interface\\Icons\\Ability_Warrior_BattleShout", "Arrives in Phase 3", "Active challenges",
-        "Personal challenges are added in Phase 3.", true)
+    local Ch = CoA.Challenges
+    SetTile(T[15], "Interface\\Icons\\Ability_Warrior_BattleShout",
+        string.format("%d / %d", Ch:CountActive(), Ch.MAX_ACTIVE), "Challenges under way",
+        string.format("Personal challenges you are pursuing. %d completed so far.", Ch:CountCompleted()))
 
     -- Whereabouts -----------------------------------------------------------
     local loc = char.location

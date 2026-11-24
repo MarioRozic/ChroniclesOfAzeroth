@@ -71,6 +71,7 @@ function Tracker:RecordSubZone()
         rec.subzones[sub] = time()
         char.stats.subzonesDiscovered = char.stats.subzonesDiscovered + 1
         CoA:Fire("STATS_CHANGED", "subzone")
+        CoA:Fire("DEED", "subzone", { name = sub })
     end
 end
 
@@ -89,6 +90,7 @@ function Tracker:OnMapExplored()
         rec.revealed = Compat.GetRevealedAreaCount(rec.mapID) or rec.revealed
     end
     CoA:Fire("STATS_CHANGED", "area")
+    CoA:Fire("DEED", "area", {})
 end
 
 local function GetZoneRecord(name, mapID, isInstance)
@@ -127,6 +129,7 @@ function Tracker:UpdateLocation()
     loc.mapID = mapID or 0
 
     local rec, isNew = GetZoneRecord(name, mapID, inInstance)
+    local newZone = false
     rec.visits = rec.visits + 1
     rec.lastVisit = time()
 
@@ -147,6 +150,7 @@ function Tracker:UpdateLocation()
             -- began may have been here before; don't claim a discovery.
             local kind = (char.meta.startLevel > 1) and "zone_recorded" or "zone_discovered"
             CoA.Feed:Add(kind, { zone = name })
+            newZone = true
         else
             CoA.Feed:Add("zone_entered", { zone = name }, { dedupe = "zone" .. name, window = 20 })
         end
@@ -154,6 +158,7 @@ function Tracker:UpdateLocation()
     self:RecordSubZone()
     CoA:Fire("LOCATION_CHANGED", name)
     CoA:Fire("STATS_CHANGED", "zone")
+    if newZone then CoA:Fire("DEED", "zone_new", { zone = name }) end
 end
 
 CoA.Feed:RegisterKind("zone_recorded", {
@@ -181,6 +186,7 @@ function Tracker:OnQuestTurnedIn(_, questID, xpReward, moneyReward)
 
     char.stats.questsCompleted = char.stats.questsCompleted + 1
     CoA:Fire("STATS_CHANGED", "quest")
+    CoA:Fire("DEED", "quest", { zone = char.location.zone, questID = questID })
     local zone = char.location.zone
     if zone ~= "" and char.exploration.zones[zone] then
         local rec = char.exploration.zones[zone]
@@ -201,6 +207,7 @@ function Tracker:OnPlayerDead()
     char.stats.deaths = char.stats.deaths + 1
     if CoA.Combat then CoA.Combat:OnPlayerDiedInRun() end
     CoA:Fire("STATS_CHANGED", "death")
+    CoA:Fire("DEED", "death", {})
     local zone = char.location.zone
     if zone ~= "" and char.exploration.zones[zone] then
         local rec = char.exploration.zones[zone]

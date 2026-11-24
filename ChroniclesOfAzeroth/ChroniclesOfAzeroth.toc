@@ -2,13 +2,13 @@
 ## Title: |cffd4af37Chronicles of Azeroth|r
 ## Notes: An RPG journal, character profile and adventure chronicle for your journey through Azeroth.
 ## Author: Mara
-## Version: 0.2.0
+## Version: 0.3.0
 ## SavedVariables: ChroniclesOfAzerothDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## AddonCompartmentFunc: ChroniclesOfAzeroth_OnAddonCompartmentClick
 ## AddonCompartmentFuncOnEnter: ChroniclesOfAzeroth_OnAddonCompartmentEnter
 ## AddonCompartmentFuncOnLeave: ChroniclesOfAzeroth_OnAddonCompartmentLeave
-## X-Phase: 2
+## X-Phase: 3
 
 # Target client: World of Warcraft: Forever 1.60.x (game type "forever"/"camelot",
 # interface 16001), which runs on the Mainline (Midnight 12.1.x) code base.
@@ -31,6 +31,10 @@ Modules\Combat.lua
 Data\Achievements.lua
 Modules\Achievements.lua
 
+# --- Challenges ----------------------------------------------------------------
+Data\Challenges.lua
+Modules\Challenges.lua
+
 # --- User interface ----------------------------------------------------------
 UI\Theme.lua
 UI\Widgets.lua
@@ -40,7 +44,7 @@ UI\Pages\Journal.lua
 UI\Pages\Achievements.lua
 UI\Pages\Exploration.lua
 UI\Pages\EventHistory.lua
-UI\Pages\Upcoming.lua
+UI\Pages\Challenges.lua
 UI\Toast.lua
 UI\MinimapButton.lua
 

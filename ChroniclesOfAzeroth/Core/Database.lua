@@ -85,7 +85,7 @@ local CHAR_DEFAULTS = {
     exploration = { zones = {} },
     -- Reserved for later phases; created now so migrations stay trivial.
     achievements = { unlocked = {} },
-    challenges = { active = {}, completed = {} },
+    challenges = { active = {}, completed = {}, failed = {} },
     journal = { notes = {} },
     profile = { customTitle = "" },
 }
