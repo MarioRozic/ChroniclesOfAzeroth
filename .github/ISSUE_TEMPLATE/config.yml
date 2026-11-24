@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Chat, questions and loose ideas
+    url: https://github.com/MarioRozic/ChroniclesOfAzeroth/discussions
+    about: Not sure it's a bug or a full idea yet? Start a discussion.

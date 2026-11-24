@@ -1,0 +1,43 @@
+name: ⚔️ Challenge idea
+description: Suggest a new challenge players can accept.
+labels: ["idea", "challenge"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Challenges are goals you accept on purpose and that only count from that
+        moment (like "Survivor": reach the next level without dying). They can be
+        repeated, and up to five can run at once.
+  - type: input
+    id: name
+    attributes:
+      label: Challenge name
+      placeholder: e.g. "Pacifist's Errand"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: The goal
+      placeholder: e.g. Complete 10 quests without killing anything that isn't a quest target.
+    validations:
+      required: true
+  - type: textarea
+    id: fail
+    attributes:
+      label: Can it be failed? How?
+  - type: dropdown
+    id: group
+    attributes:
+      label: Group
+      options:
+        - Exploration
+        - Combat
+        - Dungeons
+        - Collection
+        - Social
+        - General
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it be fun?

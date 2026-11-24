@@ -1,0 +1,46 @@
+name: 🏅 Milestone idea
+description: Suggest a new milestone (and maybe a title to go with it).
+labels: ["idea", "milestone"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Milestones reward things players really do. The addon can only count what
+        the game tells addons about (zones, quests, kills, rares, bosses, dungeons,
+        levels, deaths, emotes and so on), so describe the deed and we'll check
+        whether it can be detected.
+  - type: input
+    id: name
+    attributes:
+      label: Milestone name
+      placeholder: e.g. "Friend of the Furbolgs"
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How do you earn it?
+      placeholder: e.g. Defeat 50 furbolgs in Ashenvale and Felwood.
+    validations:
+      required: true
+  - type: input
+    id: title
+    attributes:
+      label: Title it grants (optional)
+      placeholder: e.g. "the Furbolg Friend"
+  - type: dropdown
+    id: group
+    attributes:
+      label: Which kind of deed is it?
+      options:
+        - Exploration
+        - Combat
+        - Rares and bosses
+        - Dungeons
+        - Leveling and quests
+        - Social
+        - Something else
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it be fun?
