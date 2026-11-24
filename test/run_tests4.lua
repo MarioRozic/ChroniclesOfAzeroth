@@ -32,7 +32,7 @@ local function count(t) local g, p = 0, 0 for _, m in ipairs(CHAT_SENT) do if m.
 CoA.Achievements:Unlock(L[20]); RunTimers()
 local guild, party = count()
 check(guild == 1 and party == 1, "one line each to guild and party: " .. (CHAT_SENT[1] and CHAT_SENT[1].msg or "none"))
-check(CHAT_SENT[1] and CHAT_SENT[1].msg:find("^%[Chronicles%] Mara earned the milestone") and #CHAT_SENT[1].msg <= 255, "announcement text fits a chat line")
+check(CHAT_SENT[1] and CHAT_SENT[1].msg:find("^%[Chronicles of Azeroth%] Mara earned the milestone") and #CHAT_SENT[1].msg <= 255, "announcement text fits a chat line")
 local before = #CHAT_SENT
 CoA.Achievements:Unlock(L[21]); RunTimers()
 check(#CHAT_SENT == before, "second announcement within a minute is held back")
@@ -63,7 +63,7 @@ check(g == 5, "at most 5 guild lines an hour (" .. g .. ")")
 -- 2. Brag ---------------------------------------------------------------------------
 before = #CHAT_SENT
 check(Share:Brag(Share:ProfileLine(), "SAY") and #CHAT_SENT == before, "brag to say sends nothing itself")
-check(CHAT_OPENED[#CHAT_OPENED] and CHAT_OPENED[#CHAT_OPENED]:find("^/s %[Chronicles%]"), "brag to say opens the chat box with /s")
+check(CHAT_OPENED[#CHAT_OPENED] and CHAT_OPENED[#CHAT_OPENED]:find("^/s %[Chronicles of Azeroth%]"), "brag to say opens the chat box with /s")
 print("     chat box: " .. tostring(CHAT_OPENED[#CHAT_OPENED]))
 STATE.guild = false
 check(not Share:Brag(Share:ProfileLine(), "GUILD"), "brag to guild refused when not in a guild")

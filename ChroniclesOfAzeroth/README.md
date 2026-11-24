@@ -4,7 +4,7 @@ An RPG companion for **World of Warcraft: Forever**: a travel journal, a charact
 profile and a chronicle of everything you really did on your journey. It never
 plays the game for you and never invents events.
 
-Version 0.5.1 (sharing: announcements, Brag and Fellows).
+Version 0.6.0 (first public release: brag attribution and `/coa feedback`).
 
 ## Client compatibility
 
@@ -37,6 +37,9 @@ Version 0.5.1 (sharing: announcements, Brag and Fellows).
 - `/coa scale 0.9`, `/coa resetpos`, `/coa minimap off|on`
 - `/coa milestones` opens the Milestones chapter; `/coa toast` previews a
   milestone notification.
+- `/coa feedback` (or `/coa ideas`, `/coa bug`) shows a copyable link for bug
+  reports and milestone or challenge ideas. The links live in `CoA.links` in
+  `Core/Init.lua`.
 - `/coa status` prints the client version, interface number, your tallies, which
   kill sources are active, and any event the client refused to register.
 - `/coa reset confirm` erases this character's chronicle.

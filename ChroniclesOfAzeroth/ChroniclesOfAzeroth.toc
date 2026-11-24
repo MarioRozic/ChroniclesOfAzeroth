@@ -2,13 +2,23 @@
 ## Title: |cffd4af37Chronicles of Azeroth|r
 ## Notes: An RPG journal, character profile and adventure chronicle for your journey through Azeroth.
 ## Author: Mara
-## Version: 0.5.1
+## Version: 0.6.0
 ## SavedVariables: ChroniclesOfAzerothDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## AddonCompartmentFunc: ChroniclesOfAzeroth_OnAddonCompartmentClick
 ## AddonCompartmentFuncOnEnter: ChroniclesOfAzeroth_OnAddonCompartmentEnter
 ## AddonCompartmentFuncOnLeave: ChroniclesOfAzeroth_OnAddonCompartmentLeave
 ## X-Phase: 3
+## X-Website: https://github.com/MarioRozic/ChroniclesOfAzeroth
+## X-License: MIT
+## Category: Quests
+
+# --- Release IDs ----------------------------------------------------------------
+# The packager reads these to upload each tagged release. Once the projects exist,
+# remove the leading "# " and put the real numbers / id in:
+# ## X-Curse-Project-ID: 000000
+# ## X-Wago-ID: xxxxxxxx
+# ## X-WoWI-ID: 00000
 
 # Target client: World of Warcraft: Forever 1.60.x (game type "forever"/"camelot",
 # interface 16001), which runs on the Mainline (Midnight 12.1.x) code base.

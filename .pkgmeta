@@ -1,0 +1,24 @@
+# BigWigsMods/packager configuration.
+# The addon lives in the ChroniclesOfAzeroth/ subfolder of this repository;
+# move-folders lifts it to the top of the zip so players get
+# Interface/AddOns/ChroniclesOfAzeroth/ChroniclesOfAzeroth.toc
+package-as: ChroniclesOfAzeroth
+
+move-folders:
+  ChroniclesOfAzeroth/ChroniclesOfAzeroth: ChroniclesOfAzeroth
+
+license-output: LICENSE
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# Repository-only files that must not end up in the addon zip.
+ignore:
+  - README.md
+  - CHANGELOG.md
+  - docs
+  - test
+  - previews
+  - launch-kit
+  - "*.zip"

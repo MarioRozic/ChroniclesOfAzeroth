@@ -65,10 +65,47 @@ local function PrintHelp()
         "/coa brag say|party|guild - post a summary of your journey",
         "/coa inspect - read your target's chronicle (they need the addon too)",
         "/coa announce guild|party on|off - announce new milestones",
+        "/coa feedback - report a bug or suggest a milestone or challenge",
         "/coa status - client and data diagnostics",
         "/coa reset confirm - erase this character's chronicle",
     }
     for _, l in ipairs(lines) do DEFAULT_CHAT_FRAME:AddMessage("   " .. l) end
+end
+
+-- A small window with a link the player can copy (chat links are not clickable).
+local LINK_POPUP = {
+    text = "%s",
+    button1 = CLOSE or "Close",
+    hasEditBox = true,
+    editBoxWidth = 320,
+    OnShow = function(self, data)
+        local eb = (self.GetEditBox and self:GetEditBox()) or self.editBox or self.EditBox
+        if eb then
+            eb:SetText(data or "")
+            eb:SetFocus()
+            eb:HighlightText()
+        end
+    end,
+    EditBoxOnEnterPressed = function(eb) eb:GetParent():Hide() end,
+    EditBoxOnEscapePressed = function(eb) eb:GetParent():Hide() end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+local function ShowFeedback()
+    local links = CoA.links
+    CoA:Print("thank you for helping the chronicle grow!")
+    DEFAULT_CHAT_FRAME:AddMessage("   Bugs and ideas: " .. links.issues)
+    DEFAULT_CHAT_FRAME:AddMessage("   Discussion and milestone ideas: " .. links.ideas)
+    DEFAULT_CHAT_FRAME:AddMessage("   Tip: /coa status shows the details to paste into a bug report.")
+    if StaticPopupDialogs and StaticPopup_Show then
+        StaticPopupDialogs["CHRONICLES_OF_AZEROTH_LINK"] = StaticPopupDialogs["CHRONICLES_OF_AZEROTH_LINK"] or LINK_POPUP
+        StaticPopup_Show("CHRONICLES_OF_AZEROTH_LINK",
+            "Chronicles of Azeroth: report a bug or suggest a milestone.\nPress Ctrl+C to copy the link.",
+            nil, links.issues)
+    end
 end
 
 local function PrintStatus()
@@ -120,6 +157,8 @@ local function HandleSlash(msg)
         CoA.UI:Show(PAGES[cmd])
     elseif cmd == "help" then
         PrintHelp()
+    elseif cmd == "feedback" or cmd == "ideas" or cmd == "bug" then
+        ShowFeedback()
     elseif cmd == "status" then
         PrintStatus()
     elseif cmd == "toast" then

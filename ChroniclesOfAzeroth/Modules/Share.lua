@@ -33,7 +33,7 @@ CoA.Share = Share
 local PREFIX = "CoAChron"
 local PROTOCOL = 1
 local CHUNK = 240
-local TAG = "[Chronicles]"
+local TAG = "[Chronicles of Azeroth]"
 
 Share.fellows = {}        -- full name -> { profile = {...}, received = time(), status = "..." }
 

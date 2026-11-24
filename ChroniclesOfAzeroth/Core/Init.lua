@@ -13,7 +13,15 @@ local ADDON_NAME, CoA = ...
 
 CoA.name = ADDON_NAME
 CoA.displayName = "Chronicles of Azeroth"
-CoA.version = "0.5.1"
+CoA.version = "0.6.0"
+
+-- Where players send bug reports and ideas (shown by /coa feedback).
+-- Update these if the repository lives somewhere else.
+CoA.links = {
+    home = "https://github.com/MarioRozic/ChroniclesOfAzeroth",
+    issues = "https://github.com/MarioRozic/ChroniclesOfAzeroth/issues/new/choose",
+    ideas = "https://github.com/MarioRozic/ChroniclesOfAzeroth/discussions",
+}
 
 -- Exposed globally only so other addons (and /dump) can inspect it. Nothing in
 -- this addon reads the global; all files use the private namespace.
